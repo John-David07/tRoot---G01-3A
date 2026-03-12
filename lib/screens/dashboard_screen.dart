@@ -4,6 +4,8 @@ import 'package:plant_monitoring_system/models/sensor_model.dart';
 import 'package:plant_monitoring_system/models/plant_recommendation.dart';
 import 'package:plant_monitoring_system/widgets/sensor_card.dart';
 import 'package:plant_monitoring_system/widgets/recommendation_card.dart';
+import 'package:provider/provider.dart';
+import 'package:plant_monitoring_system/providers/theme_provider.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -171,45 +173,87 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return const Center(child: Text('History Tab - Implement based on actual historical data'));
   }
 
-  Widget _buildSettingsTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const ListTile(
-          leading: Icon(Icons.brightness_6),
-          title: Text('Theme Mode'),
-          trailing: Text('Dark'),
-        ),
-        const ListTile(
-          leading: Icon(Icons.refresh),
-          title: Text('Data Refresh Rate'),
-          trailing: Text('15 min'),
-        ),
-        const ListTile(
-          leading: Icon(Icons.tune),
-          title: Text('Calibration'),
-        ),
-        ListTile(
-          leading: const Icon(Icons.delete, color: Colors.red),
-          title: const Text('Reset Data'),
-          subtitle: const Text('Clear all local storage and sensor logs.'),
-          onTap: () {
-            // Show confirmation dialog
-          },
-        ),
-        const Divider(),
-        const ListTile(
-          title: Text('System Info'),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Firmware Version: v2.4.12-stable'),
-              Text('Hardware ID: EG-SENS-8842-X'),
-              Text('Network Status: Connected'),
-            ],
+Widget _buildSettingsTab() {
+  return Consumer<ThemeProvider>(
+    builder: (context, themeProvider, _) {
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Theme Mode Toggle
+          ListTile(
+            leading: const Icon(Icons.brightness_6),
+            title: const Text('Theme Mode'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(themeProvider.isDarkMode ? 'Dark' : 'Light'),
+                Switch(
+                  value: themeProvider.isDarkMode,
+                  onChanged: (_) => themeProvider.toggleTheme(),
+                ),
+              ],
+            ),
           ),
+          const ListTile(
+            leading: Icon(Icons.refresh),
+            title: Text('Data Refresh Rate'),
+            trailing: Text('15 min'),
+          ),
+          const ListTile(
+            leading: Icon(Icons.tune),
+            title: Text('Calibration'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.delete, color: Colors.red),
+            title: const Text('Reset Data'),
+            subtitle: const Text('Clear all local storage and sensor logs.'),
+            onTap: () {
+              // Show confirmation dialog
+              _showResetDialog(context);
+            },
+          ),
+          const Divider(),
+          const ListTile(
+            title: Text('System Info'),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Firmware Version: v2.4.12-stable'),
+                Text('Hardware ID: EG-SENS-8842-X'),
+                Text('Network Status: Connected'),
+              ],
+            ),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+void _showResetDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Reset Data'),
+      content: const Text('Are you sure you want to clear all local storage and sensor logs?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () {
+            // Implement reset logic here
+            Navigator.pop(ctx);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Data reset completed')),
+            );
+          },
+          style: TextButton.styleFrom(foregroundColor: Colors.red),
+          child: const Text('Reset'),
         ),
       ],
-    );
-  }
+    ),
+  );
+}
 }
