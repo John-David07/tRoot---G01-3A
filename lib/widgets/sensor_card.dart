@@ -2,19 +2,29 @@ import 'package:flutter/material.dart';
 
 class SensorCard extends StatelessWidget {
   final String title;
-  final int moisture;
+  final Map<String, int> soilMoisture;  // Changed from int to Map
   final double temperature;
   final double humidity;
-  final String condition;
+  final String node; // Which node to display
 
   const SensorCard({
     super.key,
     required this.title,
-    required this.moisture,
+    required this.soilMoisture,
     required this.temperature,
     required this.humidity,
-    required this.condition,
+    required this.node,
   });
+
+  int get moistureValue => soilMoisture[node] ?? 0;
+  
+  String get condition {
+    int m = moistureValue;
+    if (m > 80) return 'Wet';
+    if (m > 40) return 'Optimal';
+    if (m > 10) return 'Dry';
+    return 'Critical';
+  }
 
   Color _getConditionColor() {
     switch (condition) {
@@ -38,7 +48,7 @@ class SensorCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  title,
+                  '$title (Node $node)',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 Container(
@@ -59,7 +69,7 @@ class SensorCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildSensorIndicator('💧', 'MOISTURE', '$moisture%'),
+                _buildSensorIndicator('💧', 'MOISTURE', '$moistureValue%'),
                 _buildSensorIndicator('🌡️', 'TEMP', '${temperature.round()}°C'),
                 _buildSensorIndicator('💨', 'HUMIDITY', '${humidity.round()}%'),
               ],

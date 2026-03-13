@@ -53,125 +53,168 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildDashboard() {
-    return StreamBuilder<SensorData>(
-      stream: _sensorService.getAtmosphereData(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
+Widget _buildDashboard() {
+  return StreamBuilder<SensorData>(
+    stream: _sensorService.getCurrentData(),  // Changed from getAtmosphereData
+    builder: (context, snapshot) {
+      if (!snapshot.hasData) {
+        return const Center(child: CircularProgressIndicator());
+      }
 
-        final data = snapshot.data!;
-        final recommendations = PlantRecommendation.getRecommendations(data.humidity);
+      final data = snapshot.data!;
+      final recommendations = PlantRecommendation.getRecommendations(data.humidity);
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Smart Insight Card
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Smart Insight',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.green),
-                        ),
-                        child: const Text(
-                          'Optimal for Growth: Current conditions are perfect for tropical varieties. No action needed.',
-                          style: TextStyle(color: Colors.green),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              
-              // Sensor 1 Card (Living Room)
-              SensorCard(
-                title: 'SENSOR 1 - LIVING ROOM',
-                moisture: data.getSoilMoisture('Node1'),
-                temperature: data.temperature,
-                humidity: data.humidity,
-                condition: data.getCondition('Node1'),
-              ),
-              const SizedBox(height: 24),
-
-              // Plant Recommendations
-              const Text(
-                'PLANT RECOMMENDATIONS',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              ...recommendations.map((plant) => RecommendationCard(plant: plant)),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildSensorsTab() {
-    return StreamBuilder<Map<String, int>>(
-      stream: _sensorService.getSoilData(),
-      builder: (context, snapshot) {
-        final soilData = snapshot.data ?? {};
-        
-        return ListView(
-          padding: const EdgeInsets.all(16),
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'All Sensors',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            // Smart Insight Card
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Smart Insight',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green),
+                      ),
+                      child: const Text(
+                        'Optimal for Growth: Current conditions are perfect for tropical varieties. No action needed.',
+                        style: TextStyle(color: Colors.green),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            const Text('Monitoring 5 active samples'),
             const SizedBox(height: 16),
-            ...List.generate(5, (index) {
-              String nodeKey = 'Node${index + 1}';
-              int moisture = soilData[nodeKey] ?? 0;
-              String condition;
-              if (moisture > 80) condition = 'Wet';
-              else if (moisture > 40) condition = 'Optimal';
-              else condition = 'Dry';
-              
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: condition == 'Optimal' ? Colors.green :
-                                 condition == 'Wet' ? Colors.blue : Colors.orange,
-                  radius: 8,
-                ),
-                title: Text('Sensor ${index + 1}'),
-                trailing: Text(
-                  condition,
-                  style: TextStyle(
-                    color: condition == 'Optimal' ? Colors.green :
-                           condition == 'Wet' ? Colors.blue : Colors.orange,
+            
+            // Main Sensor Card (Living Room)
+            Column(
+              children: data.getNodes().map((node) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: SensorCard(
+                    title: 'SENSOR - ${node.replaceAll('_', ' ')}',
+                    soilMoisture: data.soilMoisture,
+                    temperature: data.temperature,
+                    humidity: data.humidity,
+                    node: node,
                   ),
-                ),
-              );
-            }),
-          ],
-        );
-      },
-    );
-  }
+                );
+              }).toList(),
+            ),
 
-  Widget _buildHistoryTab() {
-    // Implement history view based on your groupmate's data structure
-    return const Center(child: Text('History Tab - Implement based on actual historical data'));
-  }
+            // Plant Recommendations
+            const Text(
+              'PLANT RECOMMENDATIONS',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            ...recommendations.map((plant) => RecommendationCard(plant: plant)),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+Widget _buildSensorsTab() {
+  return StreamBuilder<SensorData>(
+    stream: _sensorService.getCurrentData(),
+    builder: (context, snapshot) {
+      if (!snapshot.hasData) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      
+      final data = snapshot.data!;
+      final nodes = data.getNodes();
+      
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text(
+            'All Sensors',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          Text('Monitoring ${nodes.length} active sensors'),
+          const SizedBox(height: 16),
+          ...nodes.map((node) {
+            int moisture = data.getNodeMoisture(node);
+            String condition = data.getNodeCondition(node);
+            
+            return ListTile(
+              leading: CircleAvatar(
+                backgroundColor: condition == 'Optimal' ? Colors.green :
+                               condition == 'Wet' ? Colors.blue : 
+                               condition == 'Dry' ? Colors.orange : Colors.red,
+                radius: 8,
+              ),
+              title: Text(node.replaceAll('_', ' ')),
+              trailing: Text(
+                '$moisture% - $condition',
+                style: TextStyle(
+                  color: condition == 'Optimal' ? Colors.green :
+                         condition == 'Wet' ? Colors.blue :
+                         condition == 'Dry' ? Colors.orange : Colors.red,
+                ),
+              ),
+            );
+          }).toList(),
+        ],
+      );
+    },
+  );
+}
+
+Widget _buildHistoryTab() {
+  return StreamBuilder<List<SensorData>>(
+    stream: _sensorService.getHistoricalData(),
+    builder: (context, snapshot) {
+      final history = snapshot.data ?? [];
+      
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text(
+            'All Sensors',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          Text('${history.length} historical records'),
+          const SizedBox(height: 16),
+          ...history.map((data) {
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                title: Text('Sensor Reading'),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${data.timestamp}'),
+                    Text('Humidity: ${data.humidity.toStringAsFixed(1)}% • Temperature: ${data.temperature.toStringAsFixed(1)}°C'),
+                    ...data.getNodes().map((node) => 
+                      Text('  $node: ${data.getNodeMoisture(node)}%')
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+      );
+    },
+  );
+}
 
 Widget _buildSettingsTab() {
   return Consumer<ThemeProvider>(
