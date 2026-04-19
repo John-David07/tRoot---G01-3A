@@ -48,7 +48,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Plant Monitor',
+      title: 'Soil Monitor',
       theme: ThemeManager.lightTheme,
       darkTheme: ThemeManager.darkTheme,
       themeMode: ThemeMode.system,
