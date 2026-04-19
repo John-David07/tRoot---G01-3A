@@ -1,93 +1,179 @@
 import 'package:flutter/material.dart';
+import '../utils/theme_manager.dart';
+import 'circular_progress.dart';
 
 class SensorCard extends StatelessWidget {
-  final String title;
-  final Map<String, int> soilMoisture;  // Changed from int to Map
+  final String nodeId;
+  final int moisture;
   final double temperature;
   final double humidity;
-  final String node; // Which node to display
 
   const SensorCard({
     super.key,
-    required this.title,
-    required this.soilMoisture,
+    required this.nodeId,
+    required this.moisture,
     required this.temperature,
     required this.humidity,
-    required this.node,
   });
 
-  int get moistureValue => soilMoisture[node] ?? 0;
-  
-  String get condition {
-    int m = moistureValue;
-    if (m > 80) return 'Wet';
-    if (m > 40) return 'Optimal';
-    if (m > 10) return 'Dry';
-    return 'Critical';
+  String getCondition() {
+    if (moisture > 80) return 'Wet';
+    if (moisture > 40) return 'Optimal';
+    return 'Dry';
   }
 
-  Color _getConditionColor() {
-    switch (condition) {
-      case 'Optimal': return Colors.green;
-      case 'Wet': return Colors.blue;
-      case 'Dry': return Colors.orange;
-      case 'Critical': return Colors.red;
-      default: return Colors.grey;
-    }
-  }
+  Color getColor() {
+  if (moisture > 80) return ThemeManager.wet;
+  if (moisture > 40) return ThemeManager.optimal;
+  return ThemeManager.dry;
+}
 
   @override
   Widget build(BuildContext context) {
+    final condition = getCondition();
+    final color = getColor();
+
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '$title (Node $node)',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _getConditionColor().withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _getConditionColor()),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: ThemeManager.primaryColor, width: 1),
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.pushNamed(
+            context,
+            '/sensor_detail',
+            arguments: {
+              'nodeId': nodeId,
+              'moisture': moisture,
+              'temperature': temperature,
+              'humidity': humidity,
+            },
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        nodeId.replaceAll('_', ' '),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Plant ${nodeId.replaceAll('Node_', '')}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
                   ),
-                  child: Text(
-                    condition,
-                    style: TextStyle(color: _getConditionColor()),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: color),
+                    ),
+                    child: Text(
+                      condition,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: color,
+                      ),
+                    ),
                   ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: CircularProgress(
+                  value: moisture.toDouble(),
+                  label: 'Moisture',
+                  color: color,
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildSensorIndicator('💧', 'MOISTURE', '$moistureValue%'),
-                _buildSensorIndicator('🌡️', 'TEMP', '${temperature.round()}°C'),
-                _buildSensorIndicator('💨', 'HUMIDITY', '${humidity.round()}%'),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            '${temperature.toInt()}°C',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Temp',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            '${humidity.toInt()}%',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Humidity',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
-    );
-  }
-
-  Widget _buildSensorIndicator(String icon, String label, String value) {
-    return Column(
-      children: [
-        Text(icon, style: const TextStyle(fontSize: 24)),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
-      ],
     );
   }
 }

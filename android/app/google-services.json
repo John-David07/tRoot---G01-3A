@@ -1,13 +1,14 @@
 {
   "project_info": {
-    "project_number": "30911898471",
-    "project_id": "plant-monitoring-capstone",
-    "storage_bucket": "plant-monitoring-capstone.firebasestorage.app"
+    "project_number": "1000733014035",
+    "firebase_url": "https://moisture-detector---esp3-6a1f6-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "moisture-detector---esp3-6a1f6",
+    "storage_bucket": "moisture-detector---esp3-6a1f6.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:30911898471:android:19235fdf5198971b0d45c2",
+        "mobilesdk_app_id": "1:1000733014035:android:8c8cb5aa864de2925ce7e6",
         "android_client_info": {
           "package_name": "com.example.flutter_application_1"
         }
@@ -15,7 +16,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyC1ikLg4QR-Z52_p238ncTtZJt_flhWQXY"
+          "current_key": "AIzaSyCP6CmTDLQ7VYVzgTUwjfjOHtR8Pqwzcu4"
         }
       ],
       "services": {

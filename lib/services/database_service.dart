@@ -1,38 +1,65 @@
 import 'package:firebase_database/firebase_database.dart';
-import 'package:plant_monitoring_system/models/plant.dart';
+import '../models/sensor_data.dart';
 
 class DatabaseService {
   final DatabaseReference _db = FirebaseDatabase.instance.ref();
 
-  // Get a stream of all plants from the 'plants' node in the database
-  Stream<List<Plant>> getPlants() {
-    return _db.child('plants').onValue.map((event) {
-      final List<Plant> plants = [];
-      final data = event.snapshot.value as Map<dynamic, dynamic>?;
-
-      if (data != null) {
-        data.forEach((key, value) {
-          // Use the factory method from our Plant model
-          plants.add(Plant.fromJson(key.toString(), value));
-        });
-      }
-      // Sort plants by name or last updated, etc.
-      plants.sort((a, b) => a.name.compareTo(b.name));
-      return plants;
+  // Get real-time current sensor data
+  Stream<SensorData> getCurrentData() {
+    return _db.child('Current_Data').onValue.map((event) {
+      final data = event.snapshot.value as Map<dynamic, dynamic>? ?? {};
+      return SensorData.fromJson(data);
     });
   }
 
-  // Future to get a single plant's data (for historical trends later)
-  Future<Plant?> getPlant(String plantId) async {
-    final snapshot = await _db.child('plants/$plantId').get();
-    if (snapshot.exists) {
-      return Plant.fromJson(plantId, snapshot.value as Map<dynamic, dynamic>);
-    }
-    return null;
+  // Get all soil moisture nodes
+  Stream<Map<String, int>> getSoilData() {
+    return _db.child('Current_Data/Soil_Moisture').onValue.map((event) {
+      final data = event.snapshot.value as Map<dynamic, dynamic>? ?? {};
+      return Map<String, int>.from(data);
+    });
   }
 
-  // Method to add a new plant (optional for your setup)
-  Future<void> addPlant(Plant plant) {
-    return _db.child('plants/${plant.id}').set(plant.toJson());
+  // Get historical data for a specific sensor
+  Future<List<Map<String, dynamic>>> getHistoryForSensor(String nodeId) async {
+    final historyRef = _db.child('History/Soil_Sensor/$nodeId');
+    final snapshot = await historyRef.get();
+    
+    if (!snapshot.exists) return [];
+    
+    final data = snapshot.value as Map<dynamic, dynamic>? ?? {};
+    final List<Map<String, dynamic>> history = [];
+    
+    data.forEach((pushId, value) {
+      int moistureValue = 0;
+      if (value is int) {
+        moistureValue = value;
+      } else if (value is Map && value.containsKey('value')) {
+        moistureValue = value['value'];
+      }
+      
+      // Parse timestamp from pushId
+      DateTime timestamp = DateTime.now();
+      if (pushId.toString().length >= 8) {
+        final hexPart = pushId.toString().substring(1, 9);
+        try {
+          final timeValue = int.parse(hexPart, radix: 16);
+          if (timeValue > 1000000) {
+            timestamp = DateTime.fromMillisecondsSinceEpoch(timeValue);
+          }
+        } catch (e) {}
+      }
+      
+      history.add({
+        'moisture': moistureValue,
+        'timestamp': timestamp,
+        'pushId': pushId,
+      });
+    });
+    
+    // Sort by timestamp (newest first)
+    history.sort((a, b) => b['timestamp'].compareTo(a['timestamp']));
+    
+    return history;
   }
 }
