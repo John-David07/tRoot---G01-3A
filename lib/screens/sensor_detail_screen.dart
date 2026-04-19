@@ -32,7 +32,7 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
   }
 
   String getCondition() {
-    if (moisture > 80) return 'Wet';
+    if (moisture > 80) return 'Saturated';
     if (moisture > 40) return 'Optimal';
     return 'Dry';
   }

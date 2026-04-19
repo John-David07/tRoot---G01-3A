@@ -33,7 +33,7 @@ class SensorData {
   // Determine condition for a specific node
   String getNodeCondition(String node) {
     int moisture = getNodeMoisture(node);
-    if (moisture > 80) return 'Wet';
+    if (moisture > 80) return 'Saturated';
     if (moisture > 40) return 'Optimal';
     if (moisture > 10) return 'Dry';
     return 'Critical';

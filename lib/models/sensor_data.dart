@@ -24,10 +24,9 @@ class SensorData {
 
   List<String> getNodes() => soilMoisture.keys.toList();
 
-  // Remove Critical - only Wet, Optimal, Dry
   String getNodeCondition(String node) {
     int moisture = getNodeMoisture(node);
-    if (moisture > 80) return 'Wet';
+    if (moisture > 80) return 'Saturated';
     if (moisture > 40) return 'Optimal';
     return 'Dry';
   }
