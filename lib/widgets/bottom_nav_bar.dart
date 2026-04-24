@@ -26,6 +26,10 @@ class BottomNavBar extends StatelessWidget {
           label: 'Home',
         ),
         BottomNavigationBarItem(
+          icon: Icon(Icons.sensors),
+          label: 'Sensors',
+        ),
+        BottomNavigationBarItem(
           icon: Icon(Icons.history),
           label: 'History',
         ),

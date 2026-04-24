@@ -5,20 +5,21 @@ import 'screens/dashboard_screen.dart';
 import 'screens/sensor_detail_screen.dart';
 import 'utils/theme_manager.dart';
 import 'firebase_options.dart';
+import 'screens/sensors_hub_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Only initialize Firebase if not already initialized
   try {
-    if (Firebase.apps.isEmpty) {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-      print('✅ Firebase initialized successfully');
-    }
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
   } catch (e) {
-    print('❌ Firebase initialization error: $e');
+    // Ignore duplicate-app error during hot restart
+    if (!e.toString().contains('duplicate-app')) {
+      print('Firebase error: $e');
+    }
   }
   
   // 🔍 TEST: Try to read data directly from Firebase
