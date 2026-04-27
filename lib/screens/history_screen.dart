@@ -288,7 +288,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sensor Hub'),
+        title: const Text('History'),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(180),
           child: _buildFilterBar(),
