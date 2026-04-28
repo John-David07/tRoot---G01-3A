@@ -2,9 +2,16 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class GeminiService {
-  static const String _apiKey = 'AIzaSyDfITYDVXMjiwTorHRhK-0wmlnrsIBY5qo';
+  static String get _apiKey {
+    final key = dotenv.env['GEMINI_API_KEY'];
+    if (key == null || key.isEmpty) {
+      throw Exception('GEMINI_API_KEY not found in .env file');
+    }
+    return key;
+  }
   
   Future<List<Map<String, dynamic>>> getRecommendations({
     required int moisture,
