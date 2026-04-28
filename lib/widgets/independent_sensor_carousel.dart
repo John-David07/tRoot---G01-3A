@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/database_service.dart';
+import '../services/sensor_change_service.dart';
 import '../models/sensor_data.dart';
 import '../utils/theme_manager.dart';
 
@@ -71,9 +72,12 @@ class _IndependentSensorCarouselState extends State<IndependentSensorCarousel> {
 
   void _onPageChanged(int index) {
     if (_currentIndex == index) return;
+    print('🔄 CAROUSEL: Page changed to index $index (${_nodes[index]})');
     setState(() {
       _currentIndex = index;
     });
+    // BROADCAST to service so recommendations widget can listen
+    SensorChangeService.notifySensorChanged(index);
   }
 
   String _getCondition(int moisture) {
