@@ -11,7 +11,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   String _refreshRate = '30';
-  bool _isDarkMode = false;
   bool _isCalibrating = false;
 
   @override
@@ -24,17 +23,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _refreshRate = prefs.getString('refreshRate') ?? '30';
-      _isDarkMode = prefs.getBool('isDarkMode') ?? false;
     });
-  }
-
-  void _toggleTheme() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _isDarkMode = !_isDarkMode;
-    });
-    await prefs.setBool('isDarkMode', _isDarkMode);
-    // Apply theme (you'll need to implement theme switching in main.dart)
   }
 
   void _saveRefreshRate(String value) async {
@@ -50,7 +39,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _calibrateSensors() async {
     setState(() => _isCalibrating = true);
-    // Simulate calibration
     await Future.delayed(const Duration(seconds: 2));
     setState(() => _isCalibrating = false);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -93,23 +81,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // Theme Mode
-        Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Color(0xFF4CAF50), width: 1),
-          ),
-          child: SwitchListTile(
-            title: const Text('Dark Mode'),
-            subtitle: const Text('Switch between light and dark theme'),
-            value: _isDarkMode,
-            onChanged: (_) => _toggleTheme(),
-            secondary: const Icon(Icons.brightness_6),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
         // Refresh Rate
         Card(
           shape: RoundedRectangleBorder(
@@ -148,7 +119,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 : ElevatedButton(
                     onPressed: _calibrateSensors,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: ThemeManager.primaryColor,
+                      backgroundColor: const Color(0xFF4CAF50),
                     ),
                     child: const Text('Calibrate'),
                   ),
@@ -192,7 +163,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildInfoRow('Firmware Version', 'v2.4.12-stable'),
                 _buildInfoRow('Hardware ID', 'EG-SENS-8842-X'),
                 _buildInfoRow('Network Status', 'Connected'),
-                _buildInfoRow('AI Model', 'Gemini 2.0 Flash'),
+                _buildInfoRow('AI Model', 'Gemini 2.5 Flash Lite'),
               ],
             ),
           ),
