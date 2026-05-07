@@ -11,12 +11,12 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen> {
   List<HistoryRecord> _history = [];
+  List<HistoryRecord> _filteredHistory = [];
   bool _loading = true;
   String _selectedSensor = 'all';
   int _currentPage = 1;
   final int _recordsPerPage = 10;
-  
-  // Filters
+
   String _moistureMin = '';
   String _moistureMax = '';
   DateTime? _startDate;
@@ -28,140 +28,122 @@ class _HistoryScreenState extends State<HistoryScreen> {
     _fetchHistory();
   }
 
+  DateTime _parseDateFromString(String timeStr) {
+    try {
+      final parts = timeStr.split(' ');
+      final dateParts = parts[0].split('-');
+      final timeParts = parts[1].split(':');
+      return DateTime(
+        int.parse(dateParts[2]), // year
+        int.parse(dateParts[0]), // month
+        int.parse(dateParts[1]), // day
+        int.parse(timeParts[0]), // hour
+        int.parse(timeParts[1]), // minute
+        int.parse(timeParts[2]), // second
+      );
+    } catch (e) {
+      return DateTime.now();
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.month}/${date.day}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
   Future<void> _fetchHistory() async {
     setState(() => _loading = true);
-    
+
     try {
       final database = FirebaseDatabase.instance;
-      
-      // Fetch all three nodes simultaneously
-      final results = await Future.wait([
-        database.ref('History/Soil_Sensor').get(),
-        database.ref('History/Temperature').get(),
-        database.ref('History/humidity').get(),
-      ]);
-      
-      final soilSnapshot = results[0];
-      final tempSnapshot = results[1];
-      final humiditySnapshot = results[2];
-      
+      final soilSnapshot = await database.ref('History/soil_sensor').get();
+      final tempSnapshot = await database.ref('History/temperature').get();
+      final humiditySnapshot = await database.ref('History/humidity').get();
+
       if (!soilSnapshot.exists) {
         setState(() => _loading = false);
         return;
       }
-      
+
       final soilData = soilSnapshot.value as Map<dynamic, dynamic>? ?? {};
       final tempData = tempSnapshot.value as Map<dynamic, dynamic>? ?? {};
       final humidityData = humiditySnapshot.value as Map<dynamic, dynamic>? ?? {};
-      
-      final sensors = ['Node_1', 'Node_2', 'Node_3', 'Node_4', 'Node_5'];
-      
-      // Collect all unique pushIds from Soil_Sensor
-      final allPushIds = <String>{};
+
+      final sensors = ['node_1', 'node_2', 'node_3', 'node_4', 'node_5'];
+      final historyMap = <DateTime, HistoryRecord>{};
+
       for (var sensor in sensors) {
         final sensorData = soilData[sensor];
         if (sensorData is Map) {
-          allPushIds.addAll(sensorData.keys.cast<String>());
-        }
-      }
-      
-      // Build timestamp maps for temperature and humidity
-      final tempTimestampMap = <String, double>{};
-      final humidityTimestampMap = <String, double>{};
-      
-      for (var key in tempData.keys) {
-        if (key != 'id' && tempData[key] is num) {
-          tempTimestampMap[key] = (tempData[key] as num).toDouble();
-        }
-      }
-      
-      for (var key in humidityData.keys) {
-        if (key != 'id' && humidityData[key] is num) {
-          humidityTimestampMap[key] = (humidityData[key] as num).toDouble();
-        }
-      }
-      
-      // Create history records
-      final historyList = <HistoryRecord>[];
-      for (var pushId in allPushIds) {
-        final sensorReadings = <SensorReading>[];
-        
-        for (var sensor in sensors) {
-          final sensorData = soilData[sensor];
-          if (sensorData is Map && sensorData.containsKey(pushId)) {
-            final value = sensorData[pushId];
-            int moisture = 0;
-            if (value is int) {
-              moisture = value;
-            } else if (value is Map && value.containsKey('value')) {
-              moisture = value['value'];
-            }
-            
-            sensorReadings.add(SensorReading(
-              nodeId: sensor,
-              moisture: moisture,
-            ));
-          }
-        }
-        
-        if (sensorReadings.isNotEmpty) {
-          // Parse timestamp from pushId
-          DateTime timestamp = DateTime.now();
-          if (pushId.length >= 8 && pushId.startsWith('-')) {
-            final hexPart = pushId.substring(1, 9);
-            try {
-              final timeValue = int.parse(hexPart, radix: 16);
-              if (timeValue > 1000000) {
-                timestamp = DateTime.fromMillisecondsSinceEpoch(timeValue);
+          sensorData.forEach((pushId, entry) {
+            if (entry is Map && entry.containsKey('value') && entry.containsKey('time')) {
+              final timeStr = entry['time'].toString();
+              final dateTime = _parseDateFromString(timeStr);
+              final moistureValue = entry['value'] is int ? entry['value'] : 0;
+
+              if (!historyMap.containsKey(dateTime)) {
+                historyMap[dateTime] = HistoryRecord(
+                  timestamp: dateTime,
+                  sensorReadings: [],
+                  temperature: 0,
+                  humidity: 0,
+                );
               }
-            } catch (e) {}
-          }
-          
-          // Find closest temperature and humidity by timestamp
-          double temperature = 0;
-          double humidity = 0;
-          
-          // Get the closest temperature reading (by pushId order)
-          final closestTempKey = _findClosestKey(pushId, tempTimestampMap.keys.toList());
-          if (closestTempKey != null) {
-            temperature = tempTimestampMap[closestTempKey] ?? 0;
-          }
-          
-          // Get the closest humidity reading
-          final closestHumidityKey = _findClosestKey(pushId, humidityTimestampMap.keys.toList());
-          if (closestHumidityKey != null) {
-            humidity = humidityTimestampMap[closestHumidityKey] ?? 0;
-          }
-          
-          historyList.add(HistoryRecord(
-            id: pushId,
-            timestamp: timestamp,
-            sensorReadings: sensorReadings,
-            temperature: temperature,
-            humidity: humidity,
-          ));
+
+              historyMap[dateTime]!.sensorReadings.add(
+                SensorReading(
+                  nodeId: sensor.replaceFirst('node_', 'Node_'),
+                  moisture: moistureValue,
+                ),
+              );
+            }
+          });
         }
       }
-      
-      // Sort newest first
+
+      for (var entry in tempData.entries) {
+        if (entry.value is Map && (entry.value as Map).containsKey('value')) {
+          final timeStr = (entry.value as Map)['time'].toString();
+          final dateTime = _parseDateFromString(timeStr);
+          final tempValue = (entry.value as Map)['value'] is num 
+              ? ((entry.value as Map)['value'] as num).toDouble() 
+              : 0.0;
+          
+          if (historyMap.containsKey(dateTime)) {
+            historyMap[dateTime]!.temperature = tempValue;
+          }
+        }
+      }
+
+      for (var entry in humidityData.entries) {
+        if (entry.value is Map && (entry.value as Map).containsKey('value')) {
+          final timeStr = (entry.value as Map)['time'].toString();
+          final dateTime = _parseDateFromString(timeStr);
+          final humidityValue = (entry.value as Map)['value'] is num 
+              ? ((entry.value as Map)['value'] as num).toDouble() 
+              : 0.0;
+          
+          if (historyMap.containsKey(dateTime)) {
+            historyMap[dateTime]!.humidity = humidityValue;
+          }
+        }
+      }
+
+      var historyList = historyMap.values.toList();
       historyList.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-      
-      // Calculate trends (compare with next record)
+
       for (int i = 0; i < historyList.length; i++) {
-        final current = historyList[i];
         final older = i + 1 < historyList.length ? historyList[i + 1] : null;
-        
         if (older != null) {
           for (var reading in older.sensorReadings) {
-            current.previousMoistureMap[reading.nodeId] = reading.moisture;
+            historyList[i].previousMoistureMap[reading.nodeId] = reading.moisture;
           }
         }
       }
-      
+
       setState(() {
         _history = historyList;
+        _filteredHistory = historyList;
         _loading = false;
-        _currentPage = 1;
       });
     } catch (e) {
       print('Error fetching history: $e');
@@ -169,40 +151,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
-  String _findClosestKey(String targetKey, List<String> keys) {
-    if (keys.isEmpty) return '';
-    
-    String closestKey = keys[0];
-    int closestDiff = (targetKey.compareTo(keys[0])).abs();
-    
-    for (var key in keys) {
-      final diff = (targetKey.compareTo(key)).abs();
-      if (diff < closestDiff) {
-        closestDiff = diff;
-        closestKey = key;
-      }
-    }
-    
-    return closestKey;
-  }
-
-  List<HistoryRecord> get _filteredHistory {
+  void _applyFilters() {
     var filtered = List<HistoryRecord>.from(_history);
-    
-    // Filter by sensor
+
     if (_selectedSensor != 'all') {
       filtered = filtered.where((record) =>
         record.sensorReadings.any((s) => s.nodeId == _selectedSensor)
       ).toList();
     }
-    
-    // Filter by moisture range
+
     if (_moistureMin.isNotEmpty || _moistureMax.isNotEmpty) {
       filtered = filtered.where((record) {
         final values = record.sensorReadings
             .where((s) => _selectedSensor == 'all' || s.nodeId == _selectedSensor)
             .map((s) => s.moisture);
-        
         if (values.isEmpty) return false;
         
         if (_selectedSensor == 'all') {
@@ -219,8 +181,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         }
       }).toList();
     }
-    
-    // Filter by date range
+
     if (_startDate != null) {
       filtered = filtered.where((record) =>
         record.timestamp.isAfter(_startDate!.subtract(const Duration(days: 1)))
@@ -231,8 +192,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
         record.timestamp.isBefore(_endDate!.add(const Duration(days: 1)))
       ).toList();
     }
-    
-    return filtered;
+
+    setState(() {
+      _filteredHistory = filtered;
+      _currentPage = 1;
+    });
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _selectedSensor = 'all';
+      _moistureMin = '';
+      _moistureMax = '';
+      _startDate = null;
+      _endDate = null;
+      _currentPage = 1;
+      _filteredHistory = _history;
+    });
   }
 
   String _getCondition(int moisture) {
@@ -248,43 +224,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Map<String, dynamic> _getTrend(int current, int? previous) {
-    if (previous == null) {
-      return {'icon': '●', 'color': Colors.grey, 'text': '0%', 'change': 0};
-    }
+    if (previous == null) return {'icon': '●', 'color': Colors.grey, 'text': '0%', 'change': 0};
     final change = current - previous;
-    if (change > 0) {
-      return {'icon': '▲', 'color': Colors.green, 'text': '+$change%', 'change': change};
-    } else if (change < 0) {
-      return {'icon': '▼', 'color': Colors.red, 'text': '$change%', 'change': change};
-    }
+    if (change > 0) return {'icon': '▲', 'color': Colors.green, 'text': '+$change%', 'change': change};
+    if (change < 0) return {'icon': '▼', 'color': Colors.red, 'text': '$change%', 'change': change};
     return {'icon': '●', 'color': Colors.grey, 'text': '0%', 'change': 0};
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.month}/${date.day}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-  }
-
-  void _clearFilters() {
-    setState(() {
-      _selectedSensor = 'all';
-      _moistureMin = '';
-      _moistureMax = '';
-      _startDate = null;
-      _endDate = null;
-      _currentPage = 1;
-    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _filteredHistory;
-    final totalPages = (filtered.length / _recordsPerPage).ceil();
+    final totalPages = (_filteredHistory.length / _recordsPerPage).ceil();
     final startIndex = (_currentPage - 1) * _recordsPerPage;
     final endIndex = startIndex + _recordsPerPage;
-    final currentRecords = filtered.sublist(
-      startIndex,
-      endIndex > filtered.length ? filtered.length : endIndex,
-    );
+    final currentRecords = _filteredHistory.length > startIndex
+        ? _filteredHistory.sublist(startIndex, endIndex > _filteredHistory.length ? _filteredHistory.length : endIndex)
+        : [];
+
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -298,26 +254,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                // Results count
                 Padding(
                   padding: const EdgeInsets.all(12),
                   child: Text(
-                    'Showing ${currentRecords.length} of ${filtered.length} records',
+                    'Showing ${currentRecords.length} of ${_filteredHistory.length} records',
                     style: TextStyle(color: Colors.grey.shade600),
                   ),
                 ),
-                // History list
                 Expanded(
                   child: currentRecords.isEmpty
                       ? const Center(child: Text('No records match your filters'))
                       : ListView.builder(
                           itemCount: currentRecords.length,
                           itemBuilder: (context, index) {
-                            return _buildHistoryCard(currentRecords[index]);
+                            return _buildHistoryCard(currentRecords[index], isDarkMode);
                           },
                         ),
                 ),
-                // Pagination
                 if (totalPages > 1) _buildPagination(totalPages),
               ],
             ),
@@ -325,57 +278,49 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Widget _buildFilterBar() {
+    final sensors = ['all', 'Node_1', 'Node_2', 'Node_3', 'Node_4', 'Node_5'];
+
     return Container(
       padding: const EdgeInsets.all(12),
       color: Theme.of(context).scaffoldBackgroundColor,
       child: Column(
         children: [
-          // Sensor filter
           DropdownButtonFormField<String>(
             value: _selectedSensor,
-            decoration: const InputDecoration(
-              labelText: 'Sensor',
-              border: OutlineInputBorder(),
-            ),
-            items: const [
-              DropdownMenuItem(value: 'all', child: Text('All Sensors')),
-              DropdownMenuItem(value: 'Node_1', child: Text('Node 1')),
-              DropdownMenuItem(value: 'Node_2', child: Text('Node 2')),
-              DropdownMenuItem(value: 'Node_3', child: Text('Node 3')),
-              DropdownMenuItem(value: 'Node_4', child: Text('Node 4')),
-              DropdownMenuItem(value: 'Node_5', child: Text('Node 5')),
-            ],
-            onChanged: (value) => setState(() => _selectedSensor = value!),
+            decoration: const InputDecoration(labelText: 'Sensor', border: OutlineInputBorder()),
+            items: sensors.map((s) => DropdownMenuItem(value: s, child: Text(s == 'all' ? 'All Sensors' : s))).toList(),
+            onChanged: (value) => setState(() {
+              _selectedSensor = value!;
+              _applyFilters();
+            }),
           ),
           const SizedBox(height: 8),
-          // Moisture range
           Row(
             children: [
               Expanded(
                 child: TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Moisture Min (%)',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Moisture Min (%)', border: OutlineInputBorder()),
                   keyboardType: TextInputType.number,
-                  onChanged: (value) => setState(() => _moistureMin = value),
+                  onChanged: (value) {
+                    _moistureMin = value;
+                    _applyFilters();
+                  },
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Moisture Max (%)',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Moisture Max (%)', border: OutlineInputBorder()),
                   keyboardType: TextInputType.number,
-                  onChanged: (value) => setState(() => _moistureMax = value),
+                  onChanged: (value) {
+                    _moistureMax = value;
+                    _applyFilters();
+                  },
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          // Date range
           Row(
             children: [
               Expanded(
@@ -387,16 +332,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       firstDate: DateTime(2024),
                       lastDate: DateTime.now(),
                     );
-                    if (date != null) setState(() => _startDate = date);
+                    if (date != null) {
+                      _startDate = date;
+                      _applyFilters();
+                    }
                   },
                   child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'From Date',
-                      border: OutlineInputBorder(),
-                    ),
-                    child: Text(_startDate != null
-                        ? '${_startDate!.month}/${_startDate!.day}/${_startDate!.year}'
-                        : 'Select date'),
+                    decoration: const InputDecoration(labelText: 'From Date', border: OutlineInputBorder()),
+                    child: Text(_startDate != null ? '${_startDate!.month}/${_startDate!.day}/${_startDate!.year}' : 'Select date'),
                   ),
                 ),
               ),
@@ -410,34 +353,25 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       firstDate: DateTime(2024),
                       lastDate: DateTime.now(),
                     );
-                    if (date != null) setState(() => _endDate = date);
+                    if (date != null) {
+                      _endDate = date;
+                      _applyFilters();
+                    }
                   },
                   child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'To Date',
-                      border: OutlineInputBorder(),
-                    ),
-                    child: Text(_endDate != null
-                        ? '${_endDate!.month}/${_endDate!.day}/${_endDate!.year}'
-                        : 'Select date'),
+                    decoration: const InputDecoration(labelText: 'To Date', border: OutlineInputBorder()),
+                    child: Text(_endDate != null ? '${_endDate!.month}/${_endDate!.day}/${_endDate!.year}' : 'Select date'),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          // Clear filters button
-          if (_selectedSensor != 'all' ||
-              _moistureMin.isNotEmpty ||
-              _moistureMax.isNotEmpty ||
-              _startDate != null ||
-              _endDate != null)
+          if (_selectedSensor != 'all' || _moistureMin.isNotEmpty || _moistureMax.isNotEmpty || _startDate != null || _endDate != null)
+            const SizedBox(height: 8),
+          if (_selectedSensor != 'all' || _moistureMin.isNotEmpty || _moistureMax.isNotEmpty || _startDate != null || _endDate != null)
             ElevatedButton(
               onPressed: _clearFilters,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey.shade300,
-                foregroundColor: Colors.black,
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.grey.shade300, foregroundColor: Colors.black),
               child: const Text('Clear All Filters'),
             ),
         ],
@@ -445,11 +379,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _buildHistoryCard(HistoryRecord record) {
-    final readings = _selectedSensor == 'all'
-        ? record.sensorReadings
-        : record.sensorReadings.where((s) => s.nodeId == _selectedSensor).toList();
-
+  Widget _buildHistoryCard(HistoryRecord record, bool isDarkMode) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       shape: RoundedRectangleBorder(
@@ -459,34 +389,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Timestamp header
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).brightness == Brightness.dark 
-                  ? Colors.grey.shade800 
-                  : Colors.grey.shade100,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
-              ),
+              color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade100,
+              borderRadius: const BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
             ),
             child: Text(
               _formatDate(record.timestamp),
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                color: Theme.of(context).brightness == Brightness.dark 
-                    ? Colors.white 
-                    : Colors.black87,
-              ),
+              style: TextStyle(fontWeight: FontWeight.w500, color: isDarkMode ? Colors.white : Colors.black87),
             ),
           ),
-          // Sensor readings
-          ...readings.map((sensor) {
-            final condition = _getCondition(sensor.moisture);
+          ...record.sensorReadings
+              .where((s) => _selectedSensor == 'all' || s.nodeId == _selectedSensor)
+              .map((sensor) {
+            final status = _getCondition(sensor.moisture);
             final color = _getConditionColor(sensor.moisture);
             final trend = _getTrend(sensor.moisture, record.previousMoistureMap[sensor.nodeId]);
-            
             return Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
@@ -494,10 +413,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        sensor.nodeId.replaceAll('_', ' '),
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
+                      Text(sensor.nodeId, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
@@ -505,7 +421,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: color),
                         ),
-                        child: Text(condition, style: TextStyle(color: color)),
+                        child: Text(status, style: TextStyle(color: color, fontSize: 12)),
                       ),
                     ],
                   ),
@@ -523,7 +439,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 Text(trend['icon'], style: TextStyle(color: trend['color'])),
                                 const SizedBox(width: 4),
                                 Text(trend['text'], style: TextStyle(color: trend['color'], fontSize: 12)),
-                              ],
+                          ],
                             ),
                           ],
                         ),
@@ -531,10 +447,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       Expanded(
                         child: Column(
                           children: [
-                            Text(
-                              record.temperature > 0 ? '${record.temperature.toInt()}°C' : '--',
-                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                            ),
+                            Text(record.temperature > 0 ? '${record.temperature.toInt()}°C' : '--', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                             const Text('Temp', style: TextStyle(fontSize: 12)),
                           ],
                         ),
@@ -542,10 +455,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       Expanded(
                         child: Column(
                           children: [
-                            Text(
-                              record.humidity > 0 ? '${record.humidity.toInt()}%' : '--',
-                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                            ),
+                            Text(record.humidity > 0 ? '${record.humidity.toInt()}%' : '--', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                             const Text('Humidity', style: TextStyle(fontSize: 12)),
                           ],
                         ),
@@ -555,7 +465,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ],
               ),
             );
-          }),
+          }).toList(),
         ],
       ),
     );
@@ -569,16 +479,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
         children: [
           IconButton(
             icon: const Icon(Icons.chevron_left),
-            onPressed: _currentPage > 1
-                ? () => setState(() => _currentPage--)
-                : null,
+            onPressed: _currentPage > 1 ? () => setState(() => _currentPage--) : null,
           ),
           Text('Page $_currentPage of $totalPages'),
           IconButton(
             icon: const Icon(Icons.chevron_right),
-            onPressed: _currentPage < totalPages
-                ? () => setState(() => _currentPage++)
-                : null,
+            onPressed: _currentPage < totalPages ? () => setState(() => _currentPage++) : null,
           ),
         ],
       ),
@@ -586,24 +492,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 }
 
-// Data models
 class SensorReading {
   final String nodeId;
   final int moisture;
-  
   SensorReading({required this.nodeId, required this.moisture});
 }
 
 class HistoryRecord {
-  final String id;
   final DateTime timestamp;
   final List<SensorReading> sensorReadings;
-  final double temperature;
-  final double humidity;
+  double temperature;
+  double humidity;
   final Map<String, int> previousMoistureMap;
-  
+
   HistoryRecord({
-    required this.id,
     required this.timestamp,
     required this.sensorReadings,
     required this.temperature,

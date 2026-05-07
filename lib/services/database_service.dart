@@ -6,7 +6,7 @@ class DatabaseService {
 
   // Get real-time current sensor data
   Stream<SensorData> getCurrentData() {
-    return _db.child('Current_Data').onValue.map((event) {
+    return _db.child('CurrentData').onValue.map((event) {
       final data = event.snapshot.value as Map<dynamic, dynamic>? ?? {};
       return SensorData.fromJson(data);
     });
@@ -14,15 +14,23 @@ class DatabaseService {
 
   // Get all soil moisture nodes
   Stream<Map<String, int>> getSoilData() {
-    return _db.child('Current_Data/Soil_Moisture').onValue.map((event) {
+    return _db.child('CurrentData/soil_moisture').onValue.map((event) {
       final data = event.snapshot.value as Map<dynamic, dynamic>? ?? {};
-      return Map<String, int>.from(data);
+      final Map<String, int> result = {};
+      data.forEach((key, value) {
+        // Convert node_1 to Node_1 for consistency
+        String nodeId = key.toString().replaceFirst('node_', 'Node_');
+        result[nodeId] = (value as int?) ?? 0;
+      });
+      return result;
     });
   }
 
   // Get historical data for a specific sensor
   Future<List<Map<String, dynamic>>> getHistoryForSensor(String nodeId) async {
-    final historyRef = _db.child('History/Soil_Sensor/$nodeId');
+    // Convert Node_1 to node_1 for Firebase path
+    final firebaseNodeId = nodeId.toLowerCase().replaceFirst('node_', 'node_');
+    final historyRef = _db.child('History/soil_sensor/$firebaseNodeId');
     final snapshot = await historyRef.get();
     
     if (!snapshot.exists) return [];
@@ -30,31 +38,14 @@ class DatabaseService {
     final data = snapshot.value as Map<dynamic, dynamic>? ?? {};
     final List<Map<String, dynamic>> history = [];
     
-    data.forEach((pushId, value) {
-      int moistureValue = 0;
-      if (value is int) {
-        moistureValue = value;
-      } else if (value is Map && value.containsKey('value')) {
-        moistureValue = value['value'];
+    data.forEach((pushId, entry) {
+      if (entry is Map && entry.containsKey('value') && entry.containsKey('time')) {
+        history.add({
+          'moisture': entry['value'],
+          'timestamp': entry['time'],
+          'pushId': pushId,
+        });
       }
-      
-      // Parse timestamp from pushId
-      DateTime timestamp = DateTime.now();
-      if (pushId.toString().length >= 8) {
-        final hexPart = pushId.toString().substring(1, 9);
-        try {
-          final timeValue = int.parse(hexPart, radix: 16);
-          if (timeValue > 1000000) {
-            timestamp = DateTime.fromMillisecondsSinceEpoch(timeValue);
-          }
-        } catch (e) {}
-      }
-      
-      history.add({
-        'moisture': moistureValue,
-        'timestamp': timestamp,
-        'pushId': pushId,
-      });
     });
     
     // Sort by timestamp (newest first)
