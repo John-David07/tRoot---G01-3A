@@ -10,48 +10,17 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  String _refreshRate = '30';
-  bool _isCalibrating = false;
-
   @override
   void initState() {
     super.initState();
-    _loadSettings();
-  }
-
-  void _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _refreshRate = prefs.getString('refreshRate') ?? '30';
-    });
-  }
-
-  void _saveRefreshRate(String value) async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _refreshRate = value;
-    });
-    await prefs.setString('refreshRate', value);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Refresh rate set to $value seconds')),
-    );
-  }
-
-  void _calibrateSensors() async {
-    setState(() => _isCalibrating = true);
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() => _isCalibrating = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Sensors calibrated successfully')),
-    );
   }
 
   void _resetData() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Reset Data'),
-        content: const Text('Are you sure? This will clear all local settings.'),
+        title: const Text('Reset Settings'),
+        content: const Text('Are you sure? This will clear all local settings and preferences.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -69,9 +38,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (confirmed == true) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
-      _loadSettings();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Data reset completed')),
+        const SnackBar(content: Text('Settings reset completed. Restart the app for changes to take effect.')),
       );
     }
   }
@@ -81,62 +49,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // Refresh Rate
-        Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Color(0xFF4CAF50), width: 1),
-          ),
-          child: ListTile(
-            title: const Text('Data Refresh Rate'),
-            subtitle: const Text('How often sensor data updates'),
-            trailing: DropdownButton<String>(
-              value: _refreshRate,
-              items: const [
-                DropdownMenuItem(value: '15', child: Text('15 sec')),
-                DropdownMenuItem(value: '30', child: Text('30 sec')),
-                DropdownMenuItem(value: '60', child: Text('1 min')),
-                DropdownMenuItem(value: '300', child: Text('5 min')),
-              ],
-              onChanged: (value) => _saveRefreshRate(value!),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // Calibration
-        Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Color(0xFF4CAF50), width: 1),
-          ),
-          child: ListTile(
-            title: const Text('Calibration'),
-            subtitle: const Text('Recalibrate soil moisture sensors'),
-            trailing: _isCalibrating
-                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
-                : ElevatedButton(
-                    onPressed: _calibrateSensors,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4CAF50),
-                    ),
-                    child: const Text('Calibrate'),
-                  ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // Reset Data
+        // Reset Settings
         Card(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
             side: const BorderSide(color: Colors.red, width: 1),
           ),
           child: ListTile(
-            title: const Text('Reset Data', style: TextStyle(color: Colors.red)),
-            subtitle: const Text('Clear all local storage and settings'),
+            title: const Text('Reset Settings', style: TextStyle(color: Colors.red)),
+            subtitle: const Text('Clear all local storage and preferences'),
             trailing: ElevatedButton(
               onPressed: _resetData,
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
