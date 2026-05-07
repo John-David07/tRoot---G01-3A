@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -20,7 +19,7 @@ class GeminiService {
   }) async {
     try {
       final model = GenerativeModel(
-        model: 'gemini-2.5-flash-lite',
+        model: 'gemini-2.5-flash',
         apiKey: _apiKey,
         generationConfig: GenerationConfig(
           responseMimeType: 'application/json',
@@ -70,38 +69,45 @@ Return ONLY valid JSON in this exact format:
     }
   }
   
-  Future<Map<String, String>> getPlantCareFromImage(XFile imageFile) async {
+  Future<Map<String, String>> getSoilInfoFromImage(XFile imageFile) async {
     try {
       final model = GenerativeModel(
-        model: 'gemini-2.5-flash-lite',
+        model: 'gemini-2.5-flash',
         apiKey: _apiKey,
       );
       
       final bytes = await imageFile.readAsBytes();
       
       final prompt = '''
-You are a plant care expert for Philippine home gardening. Identify this plant from the image and provide:
+You are a soil identification expert. Analyze this image and determine if it shows soil.
 
-1. Plant name (common Filipino name if available)
-2. Scientific name
-3. Care instructions including:
-   - Watering frequency
-   - Sunlight requirements
-   - Ideal temperature range
-   - Humidity preference
-   - Soil type
-   - Common issues to watch for
+If the image shows soil (any type: clay, sandy, loamy, potting mix, garden soil, etc.), provide:
 
-Format your response as JSON:
+1. Soil type name
+2. Brief description of this soil type
+3. Best for: What plants thrive in this soil
+4. Drainage: Fast, moderate, or poor
+5. Nutrients: High, medium, or low
+
+If the image does NOT show soil (grass, rocks, plants, roots, people, animals, etc.), respond with:
 {
-  "name": "Plant Name",
-  "scientificName": "Scientific name",
-  "watering": "Watering instructions",
-  "sunlight": "Sunlight requirements",
-  "temperature": "Ideal temperature range",
-  "humidity": "Humidity preference",
-  "soil": "Soil type recommendation",
-  "commonIssues": "Common problems and solutions"
+  "error": true,
+  "message": "Image unidentified. Please provide an image of soil or any kind of it."
+}
+
+Format your response as JSON only, no other text:
+{
+  "name": "Soil Type Name",
+  "description": "Brief description",
+  "bestFor": "What plants thrive here",
+  "drainage": "Fast/Moderate/Poor",
+  "nutrients": "High/Medium/Low"
+}
+
+Or for invalid images:
+{
+  "error": true,
+  "message": "Image unidentified. Please provide an image of soil or any kind of it."
 }
 ''';
       
@@ -111,13 +117,13 @@ Format your response as JSON:
       ]);
       
       if (response.text == null) {
-        return _getFallbackCare();
+        return {'error': 'true', 'message': 'Unable to analyze image'};
       }
       
-      return _parseCareResponse(response.text!);
+      return _parseSoilResponse(response.text!);
     } catch (e) {
-      print('Plant care error: $e');
-      return _getFallbackCare();
+      print('Soil identification error: $e');
+      return {'error': 'true', 'message': 'Failed to analyze image'};
     }
   }
   
@@ -140,28 +146,30 @@ Format your response as JSON:
     }
   }
   
-  Map<String, String> _parseCareResponse(String responseText) {
+  Map<String, String> _parseSoilResponse(String responseText) {
     try {
       String cleaned = responseText.trim();
       if (cleaned.startsWith('```json')) cleaned = cleaned.substring(7);
       if (cleaned.startsWith('```')) cleaned = cleaned.substring(3);
       if (cleaned.endsWith('```')) cleaned = cleaned.substring(0, cleaned.length - 3);
       cleaned = cleaned.trim();
-      
+
       final decoded = json.decode(cleaned);
+      
+      if (decoded['error'] == true) {
+        return {'error': 'true', 'message': decoded['message'] ?? 'Unknown error'};
+      }
+      
       return {
-        'name': decoded['name'] ?? 'Unknown Plant',
-        'scientificName': decoded['scientificName'] ?? '',
-        'watering': decoded['watering'] ?? 'Water when soil is dry',
-        'sunlight': decoded['sunlight'] ?? 'Bright indirect light',
-        'temperature': decoded['temperature'] ?? '18-28°C',
-        'humidity': decoded['humidity'] ?? 'Moderate (40-60%)',
-        'soil': decoded['soil'] ?? 'Well-draining potting mix',
-        'commonIssues': decoded['commonIssues'] ?? 'Overwatering, pests',
+        'name': decoded['name'] ?? 'Unknown Soil',
+        'description': decoded['description'] ?? 'No description available',
+        'bestFor': decoded['bestFor'] ?? 'Various plants',
+        'drainage': decoded['drainage'] ?? 'Moderate',
+        'nutrients': decoded['nutrients'] ?? 'Medium',
       };
     } catch (e) {
       print('Parse error: $e');
-      return _getFallbackCare();
+      return {'error': 'true', 'message': 'Failed to parse response'};
     }
   }
   
@@ -183,18 +191,5 @@ Format your response as JSON:
         'reason': 'Very forgiving plant that adapts to most indoor environments.'
       },
     ];
-  }
-  
-  Map<String, String> _getFallbackCare() {
-    return {
-      'name': 'Unable to identify',
-      'scientificName': '',
-      'watering': 'Water when topsoil feels dry',
-      'sunlight': 'Bright indirect sunlight',
-      'temperature': '18-28°C',
-      'humidity': '40-60%',
-      'soil': 'Well-draining potting mix',
-      'commonIssues': 'Watch for yellowing leaves or pests',
-    };
   }
 }
