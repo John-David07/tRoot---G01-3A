@@ -26,6 +26,7 @@ class ThemeManager {
       ),
       shadowColor: primaryColor.withOpacity(0.3),
     ),
+    // Remove textTheme - let it use defaults
   );
 
   static ThemeData darkTheme = ThemeData(
@@ -45,5 +46,6 @@ class ThemeManager {
       ),
       shadowColor: primaryColor.withOpacity(0.3),
     ),
+    // Remove textTheme - let it use defaults
   );
 }

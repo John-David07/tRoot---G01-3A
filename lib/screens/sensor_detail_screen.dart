@@ -202,7 +202,12 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final condition = getCondition();
-    final color = getColor();
+    final color = getColor();final textColor = Theme.of(context).brightness == Brightness.light 
+        ? Colors.black 
+        : Colors.white;
+
+        print('Text color: $textColor');
+
 
     return Scaffold(
       appBar: AppBar(
@@ -303,16 +308,16 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Column(
                               children: [
                                 Text(
                                   '${temperature.toInt()}°C',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
+                                    color: textColor,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -332,19 +337,19 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Column(
                               children: [
                                 Text(
                                   '${humidity.toInt()}%',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
+                                    color: textColor,
                                   ),
                                 ),
-                                const SizedBox(height: 4),
+                                SizedBox(height: 4),
                                 Text(
                                   'Humidity',
                                   style: TextStyle(

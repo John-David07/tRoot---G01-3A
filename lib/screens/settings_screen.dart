@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../utils/theme_manager.dart';
+import '../services/cache_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -10,17 +10,24 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  @override
-  void initState() {
-    super.initState();
-  }
 
   void _resetData() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Reset Settings'),
-        content: const Text('Are you sure? This will clear all local settings and preferences.'),
+        title: const Text(
+          'Reset All Data',
+          style: TextStyle(color: Colors.red),
+        ),
+        content: const Text(
+          '⚠️ CAUTION! This action cannot be undone.\n\n'
+          'The following data will be permanently cleared:\n'
+          '• AI-generated plant recommendations (cached)\n'
+          '• Uploaded soil analysis results and images\n'
+          '• All locally stored preferences\n\n'
+          'Your ESP32 sensor readings and historical data will NOT be affected.\n\n'
+          'Are you sure you want to proceed?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -29,17 +36,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Reset'),
+            child: const Text('Yes, Reset Everything'),
           ),
         ],
       ),
     );
 
     if (confirmed == true) {
+      // Clear SharedPreferences (app preferences)
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
+      
+      // Clear AI cache and soil cache via CacheService
+      await CacheService().clearAllCache();
+      
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Settings reset completed. Restart the app for changes to take effect.')),
+        const SnackBar(
+          content: Text('All local data has been reset. Restart the app for complete effect.'),
+          duration: Duration(seconds: 3),
+        ),
       );
     }
   }
@@ -56,8 +71,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             side: const BorderSide(color: Colors.red, width: 1),
           ),
           child: ListTile(
-            title: const Text('Reset Settings', style: TextStyle(color: Colors.red)),
-            subtitle: const Text('Clear all local storage and preferences'),
+            title: const Text('Reset All Data', style: TextStyle(color: Colors.red)),
+            subtitle: const Text('Clear AI recommendations cache, soil analysis, and preferences'),
             trailing: ElevatedButton(
               onPressed: _resetData,
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),

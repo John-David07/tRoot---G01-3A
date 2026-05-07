@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/database_service.dart';
 import '../services/gemini_service.dart';
 import '../services/sensor_change_service.dart';
+import '../services/cache_service.dart';
 import '../models/sensor_data.dart';
 import 'recommendation_carousel.dart';
 import '../utils/theme_manager.dart';
@@ -17,6 +18,7 @@ class AiRecommendationsWidget extends StatefulWidget {
 class _AiRecommendationsWidgetState extends State<AiRecommendationsWidget> {
   final DatabaseService _dbService = DatabaseService();
   final GeminiService _geminiService = GeminiService();
+  final CacheService _cacheService = CacheService();
   
   int _currentSensorIndex = 0;
   List<String> _nodes = [];
@@ -24,7 +26,6 @@ class _AiRecommendationsWidgetState extends State<AiRecommendationsWidget> {
   
   List<Map<String, dynamic>> _recommendations = [];
   bool _isLoading = false;
-  final Map<String, List<Map<String, dynamic>>> _cache = {};
   
   late StreamSubscription _sensorSubscription;
 
@@ -32,9 +33,7 @@ class _AiRecommendationsWidgetState extends State<AiRecommendationsWidget> {
   void initState() {
     super.initState();
     _sensorSubscription = SensorChangeService.sensorChanges.listen((index) {
-      print('📡 AI WIDGET: Received sensor change: $index');
       if (_currentSensorIndex != index) {
-        print('📡 AI WIDGET: Loading new recommendations for sensor $index');
         _currentSensorIndex = index;
         _loadRecommendations();
       }
@@ -69,28 +68,38 @@ class _AiRecommendationsWidgetState extends State<AiRecommendationsWidget> {
     
     final sensorId = _nodes[_currentSensorIndex];
     final currentMoisture = _sensorData!.getNodeMoisture(sensorId);
-    print('📡 AI WIDGET: Loading for $sensorId with moisture $currentMoisture%');
+    final currentTemp = _sensorData!.temperature;
+    final currentHumidity = _sensorData!.humidity;
     
-    if (_cache.containsKey(sensorId)) {
-      print('📡 AI WIDGET: Using CACHED recommendations for $sensorId');
+    // Check condition-based cache first
+    if (_cacheService.hasAiCache(currentMoisture, currentTemp, currentHumidity)) {
       setState(() {
-        _recommendations = _cache[sensorId]!;
+        _recommendations = _cacheService.getAiCache(currentMoisture, currentTemp, currentHumidity)!;
         _isLoading = false;
       });
       return;
     }
     
-    print('📡 AI WIDGET: Fetching NEW recommendations for $sensorId');
+    // Deadband check
+    if (_cacheService.shouldSkipDueToDeadband(sensorId, currentMoisture)) {
+      print('📡 Deadband ignored: moisture change less than 10%');
+      return;
+    }
+    
+    // Update last fetched moisture
+    _cacheService.updateLastFetchedMoisture(sensorId, currentMoisture);
+    
     setState(() => _isLoading = true);
     
     final recommendations = await _geminiService.getRecommendations(
       moisture: currentMoisture,
-      temperature: _sensorData!.temperature,
-      humidity: _sensorData!.humidity,
+      temperature: currentTemp,
+      humidity: currentHumidity,
     );
     
     if (mounted) {
-      _cache[sensorId] = recommendations;
+      // Store in cache
+      _cacheService.setAiCache(currentMoisture, currentTemp, currentHumidity, recommendations);
       setState(() {
         _recommendations = recommendations;
         _isLoading = false;

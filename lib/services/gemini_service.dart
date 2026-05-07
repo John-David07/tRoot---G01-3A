@@ -19,7 +19,7 @@ class GeminiService {
   }) async {
     try {
       final model = GenerativeModel(
-        model: 'gemini-2.5-flash',
+        model: 'gemini-2.5-flash-lite',
         apiKey: _apiKey,
         generationConfig: GenerationConfig(
           responseMimeType: 'application/json',
@@ -72,7 +72,7 @@ Return ONLY valid JSON in this exact format:
   Future<Map<String, String>> getSoilInfoFromImage(XFile imageFile) async {
     try {
       final model = GenerativeModel(
-        model: 'gemini-2.5-flash',
+        model: 'gemini-2.5-flash-lite',
         apiKey: _apiKey,
       );
       

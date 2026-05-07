@@ -171,7 +171,7 @@ class _IndependentSensorCarouselState extends State<IndependentSensorCarousel> {
                             Expanded(
                               child: Container(
                                 padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
+                                decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
                                 child: Column(
                                   children: [
                                     Text('${_sensorData!.temperature.toInt()}°C', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
@@ -184,7 +184,7 @@ class _IndependentSensorCarouselState extends State<IndependentSensorCarousel> {
                             Expanded(
                               child: Container(
                                 padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
+                                decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
                                 child: Column(
                                   children: [
                                     Text('${_sensorData!.humidity.toInt()}%', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),

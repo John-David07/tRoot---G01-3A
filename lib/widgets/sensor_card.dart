@@ -117,7 +117,6 @@ class SensorCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Column(
@@ -145,7 +144,6 @@ class SensorCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Column(
