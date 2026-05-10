@@ -27,13 +27,14 @@ class _SensorsHubScreenState extends State<SensorsHubScreen> {
         }
 
         final data = snapshot.data!;
-        
+
         // Sort nodes naturally
-        var nodes = data.getNodes()..sort((a, b) {
-          int numA = int.tryParse(a.replaceAll('Node_', '')) ?? 0;
-          int numB = int.tryParse(b.replaceAll('Node_', '')) ?? 0;
-          return numA.compareTo(numB);
-        });
+        var nodes = data.getNodes()
+          ..sort((a, b) {
+            int numA = int.tryParse(a.replaceAll('Node_', '')) ?? 0;
+            int numB = int.tryParse(b.replaceAll('Node_', '')) ?? 0;
+            return numA.compareTo(numB);
+          });
 
         if (nodes.isEmpty) {
           return const Center(child: Text('No sensors found'));
@@ -49,7 +50,10 @@ class _SensorsHubScreenState extends State<SensorsHubScreen> {
                   children: [
                     const Text(
                       'Sensor Hub',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -61,16 +65,10 @@ class _SensorsHubScreenState extends State<SensorsHubScreen> {
               ),
             ),
             SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final nodeId = nodes[index];
-                  return _buildSensorCard(
-                    nodeId: nodeId,
-                    data: data,
-                  );
-                },
-                childCount: nodes.length,
-              ),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final nodeId = nodes[index];
+                return _buildSensorCard(nodeId: nodeId, data: data);
+              }, childCount: nodes.length),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 80)),
           ],
@@ -84,12 +82,14 @@ class _SensorsHubScreenState extends State<SensorsHubScreen> {
     final condition = _getCondition(moisture);
     final color = _getConditionColor(moisture);
 
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: const BorderSide(color: ThemeManager.primaryColor, width: 1),
       ),
+      color: isDarkMode ? const Color(0xFF1f2937) : Colors.white,
       child: InkWell(
         onTap: () {
           Navigator.pushNamed(
@@ -136,23 +136,43 @@ class _SensorsHubScreenState extends State<SensorsHubScreen> {
                   children: [
                     Text(
                       nodeId.replaceAll('_', ' '),
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Plant ${nodeId.replaceAll('Node_', '')}',
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(Icons.thermostat, size: 14, color: Colors.grey.shade600),
+                        Icon(
+                          Icons.thermostat,
+                          size: 14,
+                          color: const Color.fromARGB(255, 255, 0, 76),
+                        ),
                         const SizedBox(width: 4),
-                        Text('${data.temperature.toInt()}°C', style: const TextStyle(fontSize: 12)),
+                        Text(
+                          '${data.temperature.toInt()}°C',
+                          style: const TextStyle(fontSize: 12),
+                        ),
                         const SizedBox(width: 12),
-                        Icon(Icons.water_drop, size: 14, color: Colors.grey.shade600),
+                        Icon(
+                          Icons.water_drop,
+                          size: 14,
+                          color: const Color.fromARGB(255, 0, 191, 255),
+                        ),
                         const SizedBox(width: 4),
-                        Text('${data.humidity.toInt()}%', style: const TextStyle(fontSize: 12)),
+                        Text(
+                          '${data.humidity.toInt()}%',
+                          style: const TextStyle(fontSize: 12),
+                        ),
                       ],
                     ),
                   ],
@@ -160,7 +180,10 @@ class _SensorsHubScreenState extends State<SensorsHubScreen> {
               ),
               // Status badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
@@ -168,7 +191,11 @@ class _SensorsHubScreenState extends State<SensorsHubScreen> {
                 ),
                 child: Text(
                   condition,
-                  style: TextStyle(color: color, fontWeight: FontWeight.w500, fontSize: 12),
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 12,
+                  ),
                 ),
               ),
               const Icon(Icons.chevron_right, color: Colors.grey),

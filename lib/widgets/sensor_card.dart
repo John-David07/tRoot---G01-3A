@@ -32,6 +32,7 @@ class SensorCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final condition = getCondition();
     final color = getColor();
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Card(
       elevation: 2,
@@ -39,6 +40,7 @@ class SensorCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: ThemeManager.primaryColor, width: 1),
       ),
+      color: isDarkMode ? const Color(0xFF1f2937) : Colors.white,
       child: InkWell(
         onTap: () {
           Navigator.pushNamed(

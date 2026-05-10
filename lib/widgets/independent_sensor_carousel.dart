@@ -9,12 +9,13 @@ class IndependentSensorCarousel extends StatefulWidget {
   const IndependentSensorCarousel({super.key});
 
   @override
-  State<IndependentSensorCarousel> createState() => _IndependentSensorCarouselState();
+  State<IndependentSensorCarousel> createState() =>
+      _IndependentSensorCarouselState();
 }
 
 class _IndependentSensorCarouselState extends State<IndependentSensorCarousel> {
   final DatabaseService _dbService = DatabaseService();
-  
+
   late PageController _pageController;
   int _currentIndex = 0;
   Timer? _autoCycleTimer;
@@ -38,17 +39,18 @@ class _IndependentSensorCarouselState extends State<IndependentSensorCarousel> {
   void _loadData() {
     _dbService.getCurrentData().listen((data) {
       if (mounted) {
-        final newNodes = data.getNodes()..sort((a, b) {
-          int numA = int.tryParse(a.replaceAll('Node_', '')) ?? 0;
-          int numB = int.tryParse(b.replaceAll('Node_', '')) ?? 0;
-          return numA.compareTo(numB);
-        });
-        
+        final newNodes = data.getNodes()
+          ..sort((a, b) {
+            int numA = int.tryParse(a.replaceAll('Node_', '')) ?? 0;
+            int numB = int.tryParse(b.replaceAll('Node_', '')) ?? 0;
+            return numA.compareTo(numB);
+          });
+
         setState(() {
           _sensorData = data;
           _nodes = newNodes;
         });
-        
+
         _startAutoCycle();
       }
     });
@@ -115,21 +117,42 @@ class _IndependentSensorCarouselState extends State<IndependentSensorCarousel> {
               final condition = _getCondition(moisture);
               final color = _getConditionColor(moisture);
 
+              final isDarkMode =
+                  Theme.of(context).brightness == Brightness.dark;
+              final textColor = isDarkMode ? Colors.white : Colors.black87;
+              
               return Center(
                 child: Card(
                   margin: const EdgeInsets.symmetric(horizontal: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(color: ThemeManager.primaryColor, width: 1),
+                    side: const BorderSide(
+                      color: ThemeManager.primaryColor,
+                      width: 1,
+                    ),
                   ),
+                  color: isDarkMode ? const Color(0xFF1f2937) : Colors.white,
                   child: Padding(
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(nodeId.replaceAll('_', ' '), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        Text(
+                          nodeId.replaceAll('_', ' '),
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
                         const SizedBox(height: 4),
-                        Text('Plant ${nodeId.replaceAll('Node_', '')}', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                        Text(
+                          'Plant ${nodeId.replaceAll('Node_', '')}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                          ),
+                        ),
                         const SizedBox(height: 24),
                         SizedBox(
                           width: 140,
@@ -142,14 +165,17 @@ class _IndependentSensorCarouselState extends State<IndependentSensorCarousel> {
                                   value: moisture / 100,
                                   strokeWidth: 12,
                                   backgroundColor: Colors.grey.shade200,
-                                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    color,
+                                  ),
                                 ),
                               ),
                               Text(
                                 '$moisture%',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 24,
                                   fontWeight: FontWeight.bold,
+                                  color: textColor,
                                 ),
                               ),
                             ],
@@ -157,13 +183,22 @@ class _IndependentSensorCarouselState extends State<IndependentSensorCarousel> {
                         ),
                         const SizedBox(height: 24),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: color.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: color),
                           ),
-                          child: Text(condition, style: TextStyle(color: color, fontWeight: FontWeight.w500)),
+                          child: Text(
+                            condition,
+                            style: TextStyle(
+                              color: color,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 24),
                         Row(
@@ -171,11 +206,38 @@ class _IndependentSensorCarouselState extends State<IndependentSensorCarousel> {
                             Expanded(
                               child: Container(
                                 padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
-                                child: Column(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Text('${_sensorData!.temperature.toInt()}°C', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                                    Text('Temp', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                                    Icon(
+                                      Icons.thermostat,
+                                      size: 28,
+                                      color: const Color.fromARGB(255, 255, 0, 76),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '${_sensorData!.temperature.toInt()}°C',
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                            color: textColor,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Temp',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ],
                                 ),
                               ),
@@ -184,11 +246,38 @@ class _IndependentSensorCarouselState extends State<IndependentSensorCarousel> {
                             Expanded(
                               child: Container(
                                 padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
-                                child: Column(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Text('${_sensorData!.humidity.toInt()}%', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                                    Text('Humidity', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                                    Icon(
+                                      Icons.water_drop,
+                                      size: 28,
+                                      color: const Color.fromARGB(255, 0, 191, 255),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '${_sensorData!.humidity.toInt()}%',
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                            color: textColor,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Humidity',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ],
                                 ),
                               ),
@@ -221,7 +310,9 @@ class _IndependentSensorCarouselState extends State<IndependentSensorCarousel> {
                   width: _currentIndex == index ? 24 : 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: _currentIndex == index ? ThemeManager.primaryColor : Colors.grey.shade300,
+                    color: _currentIndex == index
+                        ? ThemeManager.primaryColor
+                        : Colors.grey.shade300,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),

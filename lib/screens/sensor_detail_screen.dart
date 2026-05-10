@@ -20,18 +20,18 @@ class SensorDetailScreen extends StatefulWidget {
 class _SensorDetailScreenState extends State<SensorDetailScreen> {
   final DatabaseService _dbService = DatabaseService();
   final GeminiService _geminiService = GeminiService();
-  
+
   late String nodeId;
   late int moisture;
   late double temperature;
   late double humidity;
   late Future<List<Map<String, dynamic>>> _historyFuture;
-  
+
   // Soil upload state
   XFile? _uploadedSoilImage;
   Map<String, String>? _soilInfo;
   bool _isAnalyzingSoil = false;
-  
+
   // Cache keys for this specific sensor
   String get _soilImageCacheKey => 'soil_image_${nodeId}';
   String get _soilInfoCacheKey => 'soil_info_${nodeId}';
@@ -44,13 +44,13 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
 
   Future<void> _loadCachedSoilData() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Load cached image path (use existsSync for synchronous check)
     final cachedImagePath = prefs.getString(_soilImageCacheKey);
     if (cachedImagePath != null && File(cachedImagePath).existsSync()) {
       _uploadedSoilImage = XFile(cachedImagePath);
     }
-    
+
     // Load cached soil info
     final cachedSoilInfo = prefs.getString(_soilInfoCacheKey);
     if (cachedSoilInfo != null) {
@@ -60,7 +60,7 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
         print('Error loading cached soil info: $e');
       }
     }
-    
+
     if (mounted) {
       setState(() {});
     }
@@ -68,12 +68,12 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
 
   Future<void> _saveSoilDataToCache() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Save image path
     if (_uploadedSoilImage != null) {
       await prefs.setString(_soilImageCacheKey, _uploadedSoilImage!.path);
     }
-    
+
     // Save soil info
     if (_soilInfo != null) {
       await prefs.setString(_soilInfoCacheKey, json.encode(_soilInfo));
@@ -94,7 +94,7 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
     moisture = args['moisture'];
     temperature = args['temperature'];
     humidity = args['humidity'];
-    
+
     _historyFuture = _dbService.getHistoryForSensor(nodeId);
   }
 
@@ -132,11 +132,11 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
         ],
       ),
     );
-    
+
     if (option == null || option == 'cancel') return;
-    
+
     XFile? image;
-    
+
     if (option == 'camera') {
       final status = await Permission.camera.request();
       if (status.isGranted) {
@@ -144,7 +144,9 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
         image = await picker.pickImage(source: ImageSource.camera);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Camera permission is required to take photos')),
+          const SnackBar(
+            content: Text('Camera permission is required to take photos'),
+          ),
         );
         return;
       }
@@ -152,16 +154,16 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
       final picker = ImagePicker();
       image = await picker.pickImage(source: ImageSource.gallery);
     }
-    
+
     if (image != null) {
       setState(() {
         _uploadedSoilImage = image;
         _isAnalyzingSoil = true;
         _soilInfo = null;
       });
-      
+
       final soilInfo = await _geminiService.getSoilInfoFromImage(image);
-      
+
       if (mounted) {
         setState(() {
           _soilInfo = soilInfo;
@@ -183,18 +185,10 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
             width: 80,
             child: Text(
               title,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
             ),
           ),
-          Expanded(
-            child: Text(
-              content,
-              style: const TextStyle(fontSize: 13),
-            ),
-          ),
+          Expanded(child: Text(content, style: const TextStyle(fontSize: 13))),
         ],
       ),
     );
@@ -203,14 +197,16 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final condition = getCondition();
-    final color = getColor();final textColor = Theme.of(context).brightness == Brightness.light 
-        ? Colors.black 
-        : Colors.white;
-
-        print('Text color: $textColor');
-
+    final color = getColor();
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDarkMode ? Colors.white : Colors.black;
+    // Complementary root background for dark mode
+    final rootBg = isDarkMode
+        ? const Color(0xFF101A24)
+        : const Color(0xFFF5F7FA);
 
     return Scaffold(
+      backgroundColor: rootBg,
       appBar: AppBar(
         title: Text('Sensor ${nodeId.replaceAll('_', ' ')}'),
         leading: IconButton(
@@ -245,8 +241,12 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
               elevation: 2,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: const BorderSide(color: ThemeManager.primaryColor, width: 1),
+                side: const BorderSide(
+                  color: ThemeManager.primaryColor,
+                  width: 1,
+                ),
               ),
+              color: isDarkMode ? const Color(0xFF1f2937) : Colors.white,
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -265,14 +265,17 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
                                     value: moisture / 100,
                                     strokeWidth: 12,
                                     backgroundColor: Colors.grey.shade200,
-                                    valueColor: AlwaysStoppedAnimation<Color>(color),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      color,
+                                    ),
                                   ),
                                 ),
                                 Text(
                                   '$moisture%',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 24,
                                     fontWeight: FontWeight.bold,
+                                    color: textColor,
                                   ),
                                 ),
                               ],
@@ -283,7 +286,7 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
                             'Moisture',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey.shade600,
+                              color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                             ),
                           ),
                         ],
@@ -291,7 +294,10 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
                     ),
                     const SizedBox(height: 16),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: color.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20),
@@ -299,7 +305,10 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
                       ),
                       child: Text(
                         condition,
-                        style: TextStyle(color: color, fontWeight: FontWeight.w500),
+                        style: TextStyle(
+                          color: color,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -311,23 +320,34 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Column(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Text(
-                                  '${temperature.toInt()}°C',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: textColor,
-                                  ),
+                                Icon(
+                                  Icons.thermostat,
+                                  size: 24,
+                                  color: const Color.fromARGB(255, 255, 0, 76),
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Temperature',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade600,
-                                  ),
+                                const SizedBox(width: 8),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${temperature.toInt()}°C',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: textColor,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Temperature',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -340,23 +360,34 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Column(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Text(
-                                  '${humidity.toInt()}%',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: textColor,
-                                  ),
+                                Icon(
+                                  Icons.water_drop,
+                                  size: 24,
+                                  color: const Color.fromARGB(255, 0, 191, 255),
                                 ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Humidity',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade600,
-                                  ),
+                                const SizedBox(width: 8),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${humidity.toInt()}%',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: textColor,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Humidity',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -376,8 +407,12 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
               elevation: 2,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: const BorderSide(color: ThemeManager.primaryColor, width: 1),
+                side: const BorderSide(
+                  color: ThemeManager.primaryColor,
+                  width: 1,
+                ),
               ),
+              color: isDarkMode ? const Color(0xFF1f2937) : Colors.white,
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -395,14 +430,15 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
                       'Last 15 readings',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade600,
+                        color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                       ),
                     ),
                     const SizedBox(height: 16),
                     FutureBuilder<List<Map<String, dynamic>>>(
                       future: _historyFuture,
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
                           return const SizedBox(
                             height: 250,
                             child: Center(child: CircularProgressIndicator()),
@@ -412,18 +448,22 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
                         if (!snapshot.hasData || snapshot.data!.isEmpty) {
                           return const SizedBox(
                             height: 250,
-                            child: Center(child: Text('No historical data available')),
+                            child: Center(
+                              child: Text('No historical data available'),
+                            ),
                           );
                         }
 
                         final history = snapshot.data!.take(15).toList();
                         final spots = <FlSpot>[];
-                        
+
                         for (int i = 0; i < history.length; i++) {
-                          spots.add(FlSpot(
-                            i.toDouble(),
-                            history[i]['moisture'].toDouble(),
-                          ));
+                          spots.add(
+                            FlSpot(
+                              i.toDouble(),
+                              history[i]['moisture'].toDouble(),
+                            ),
+                          );
                         }
 
                         return SizedBox(
@@ -462,8 +502,12 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
                 margin: EdgeInsets.zero,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(color: ThemeManager.primaryColor, width: 1),
+                  side: const BorderSide(
+                    color: ThemeManager.primaryColor,
+                    width: 1,
+                  ),
                 ),
+                color: isDarkMode ? const Color(0xFF1f2937) : Colors.white,
                 child: InkWell(
                   onTap: _handleSoilImageUpload,
                   borderRadius: BorderRadius.circular(12),
@@ -478,74 +522,104 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
                             ],
                           )
                         : _uploadedSoilImage != null && _soilInfo != null
-                            ? (_soilInfo!['error'] == 'true'
-                                ? Column(
-                                    children: [
-                                      Icon(Icons.error_outline, size: 48, color: Colors.orange),
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        _soilInfo!['message'] ?? 'Unable to identify',
-                                        style: const TextStyle(fontSize: 14),
-                                        textAlign: TextAlign.center,
+                        ? (_soilInfo!['error'] == 'true'
+                              ? Column(
+                                  children: [
+                                    Icon(
+                                      Icons.error_outline,
+                                      size: 48,
+                                      color: Colors.orange,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      _soilInfo!['message'] ??
+                                          'Unable to identify',
+                                      style: const TextStyle(fontSize: 14),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    TextButton(
+                                      onPressed: _handleSoilImageUpload,
+                                      child: const Text('Try Another Image'),
+                                    ),
+                                  ],
+                                )
+                              : Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.file(
+                                        File(_uploadedSoilImage!.path),
+                                        height: 150,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
                                       ),
-                                      const SizedBox(height: 12),
-                                      TextButton(
-                                        onPressed: _handleSoilImageUpload,
-                                        child: const Text('Try Another Image'),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      _soilInfo!['name'] ?? 'Unknown Soil',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: textColor,
                                       ),
-                                    ],
-                                  )
-                                : Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: Image.file(
-                                          File(_uploadedSoilImage!.path),
-                                          height: 150,
-                                          width: double.infinity,
-                                          fit: BoxFit.cover,
-                                        ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      _soilInfo!['description'] ?? '',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: textColor,
                                       ),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        _soilInfo!['name'] ?? 'Unknown Soil',
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _buildSoilInfoRow(
+                                      '🌱 Best for',
+                                      _soilInfo!['bestFor'],
+                                    ),
+                                    _buildSoilInfoRow(
+                                      '💧 Drainage',
+                                      _soilInfo!['drainage'],
+                                    ),
+                                    _buildSoilInfoRow(
+                                      '🧪 Nutrients',
+                                      _soilInfo!['nutrients'],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    TextButton(
+                                      onPressed: _handleSoilImageUpload,
+                                      child: const Text(
+                                        'Upload Another Soil Sample',
                                       ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        _soilInfo!['description'] ?? '',
-                                        style: const TextStyle(fontSize: 14),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      _buildSoilInfoRow('🌱 Best for', _soilInfo!['bestFor']),
-                                      _buildSoilInfoRow('💧 Drainage', _soilInfo!['drainage']),
-                                      _buildSoilInfoRow('🧪 Nutrients', _soilInfo!['nutrients']),
-                                      const SizedBox(height: 8),
-                                      TextButton(
-                                        onPressed: _handleSoilImageUpload,
-                                        child: const Text('Upload Another Soil Sample'),
-                                      ),
-                                    ],
-                                  ))
-                            : Column(
-                                children: [
-                                  Icon(Icons.cloud_upload, size: 48, color: ThemeManager.primaryColor),
-                                  const SizedBox(height: 12),
-                                  const Text(
-                                    'Upload soil image for identification',
-                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'PNG, JPG, JPEG only',
-                                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                                  ),
-                                ],
+                                    ),
+                                  ],
+                                ))
+                        : Column(
+                            children: [
+                              Icon(
+                                Icons.cloud_upload,
+                                size: 48,
+                                color: ThemeManager.primaryColor,
                               ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Upload soil image for identification',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'PNG, JPG, JPEG only',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade500,
+                                ),
+                              ),
+                            ],
+                          ),
                   ),
                 ),
               ),
@@ -564,7 +638,6 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
             ),
 
             const SizedBox(height: 40),
-
           ],
         ),
       ),

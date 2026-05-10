@@ -14,11 +14,14 @@ class RecommendationHistoryWidget extends StatefulWidget {
   });
 
   @override
-  State<RecommendationHistoryWidget> createState() => _RecommendationHistoryWidgetState();
+  State<RecommendationHistoryWidget> createState() =>
+      _RecommendationHistoryWidgetState();
 }
 
-class _RecommendationHistoryWidgetState extends State<RecommendationHistoryWidget> {
-  final RecommendationHistoryService _historyService = RecommendationHistoryService();
+class _RecommendationHistoryWidgetState
+    extends State<RecommendationHistoryWidget> {
+  final RecommendationHistoryService _historyService =
+      RecommendationHistoryService();
   List<RecommendationHistoryEntry> _history = [];
   bool _isLoading = true;
   int _currentPage = 0;
@@ -54,12 +57,15 @@ class _RecommendationHistoryWidgetState extends State<RecommendationHistoryWidge
     final start = _currentPage * _itemsPerPage;
     final end = start + _itemsPerPage;
     if (start >= _history.length) return [];
-    return _history.sublist(start, end > _history.length ? _history.length : end);
+    return _history.sublist(
+      start,
+      end > _history.length ? _history.length : end,
+    );
   }
 
   Color _getMoistureStatusColor(String status, BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     switch (status) {
       case 'Saturated':
         return isDarkMode ? Colors.lightBlueAccent : Colors.blue;
@@ -90,7 +96,6 @@ class _RecommendationHistoryWidgetState extends State<RecommendationHistoryWidge
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -116,11 +121,18 @@ class _RecommendationHistoryWidgetState extends State<RecommendationHistoryWidge
                 ),
                 if (_history.isNotEmpty)
                   IconButton(
-                    icon: Icon(Icons.delete_outline, size: 20, color: isDarkMode ? Colors.redAccent : Colors.red),
+                    icon: Icon(
+                      Icons.delete_outline,
+                      size: 20,
+                      color: isDarkMode ? Colors.redAccent : Colors.red,
+                    ),
                     onPressed: _clearHistory,
                     tooltip: 'Clear history',
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
                   ),
               ],
             ),
@@ -141,18 +153,30 @@ class _RecommendationHistoryWidgetState extends State<RecommendationHistoryWidge
                   padding: const EdgeInsets.all(32),
                   child: Column(
                     children: [
-                      Icon(Icons.history, size: 48, color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400),
+                      Icon(
+                        Icons.history,
+                        size: 48,
+                        color: isDarkMode
+                            ? Colors.grey.shade600
+                            : Colors.grey.shade400,
+                      ),
                       const SizedBox(height: 12),
                       Text(
                         'No recommendation history yet',
-                        style: TextStyle(color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600),
+                        style: TextStyle(
+                          color: isDarkMode
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'AI recommendations will appear here when generated',
                         style: TextStyle(
-                          fontSize: 12, 
-                          color: isDarkMode ? Colors.grey.shade500 : Colors.grey.shade500,
+                          fontSize: 12,
+                          color: isDarkMode
+                              ? Colors.grey.shade500
+                              : Colors.grey.shade500,
                         ),
                       ),
                     ],
@@ -162,7 +186,9 @@ class _RecommendationHistoryWidgetState extends State<RecommendationHistoryWidge
             else
               Column(
                 children: [
-                  ..._currentPageItems.map((entry) => _buildHistoryItem(entry, context)),
+                  ..._currentPageItems.map(
+                    (entry) => _buildHistoryItem(entry, context),
+                  ),
                   if (_totalPages > 1) _buildPagination(isDarkMode),
                 ],
               ),
@@ -172,17 +198,22 @@ class _RecommendationHistoryWidgetState extends State<RecommendationHistoryWidge
     );
   }
 
-  Widget _buildHistoryItem(RecommendationHistoryEntry entry, BuildContext context) {
+  Widget _buildHistoryItem(
+    RecommendationHistoryEntry entry,
+    BuildContext context,
+  ) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final statusColor = _getMoistureStatusColor(entry.moistureStatus, context);
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isDarkMode ? const Color(0xFF111827) : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200),
+        border: Border.all(
+          color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -207,7 +238,9 @@ class _RecommendationHistoryWidgetState extends State<RecommendationHistoryWidge
                       style: TextStyle(
                         fontSize: 12,
                         fontStyle: FontStyle.italic,
-                        color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                        color: isDarkMode
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade600,
                       ),
                     ),
                   ],
@@ -235,18 +268,33 @@ class _RecommendationHistoryWidgetState extends State<RecommendationHistoryWidge
           Text(
             _formatDate(entry.dateRecommended),
             style: TextStyle(
-              fontSize: 11, 
+              fontSize: 11,
               color: isDarkMode ? Colors.grey.shade500 : Colors.grey.shade500,
             ),
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              _buildChip(Icons.water_drop, '${entry.moisture}%', Colors.blue, isDarkMode),
+              _buildChip(
+                Icons.water_drop,
+                '${entry.moisture}%',
+                Colors.blue,
+                isDarkMode,
+              ),
               const SizedBox(width: 8),
-              _buildChip(Icons.thermostat, '${entry.temperature.toInt()}°C', Colors.red, isDarkMode),
+              _buildChip(
+                Icons.thermostat,
+                '${entry.temperature.toInt()}°C',
+                Colors.red,
+                isDarkMode,
+              ),
               const SizedBox(width: 8),
-              _buildChip(Icons.opacity, '${entry.humidity.toInt()}%', Colors.teal, isDarkMode),
+              _buildChip(
+                Icons.opacity,
+                '${entry.humidity.toInt()}%',
+                Colors.teal,
+                isDarkMode,
+              ),
             ],
           ),
         ],
@@ -255,9 +303,11 @@ class _RecommendationHistoryWidgetState extends State<RecommendationHistoryWidge
   }
 
   Widget _buildChip(IconData icon, String label, Color color, bool isDarkMode) {
-    final chipColor = isDarkMode ? color.withOpacity(0.3) : color.withOpacity(0.1);
+    final chipColor = isDarkMode
+        ? color.withOpacity(0.3)
+        : color.withOpacity(0.1);
     final textColor = isDarkMode ? color : color;
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -269,10 +319,7 @@ class _RecommendationHistoryWidgetState extends State<RecommendationHistoryWidge
         children: [
           Icon(icon, size: 12, color: textColor),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(fontSize: 10, color: textColor),
-          ),
+          Text(label, style: TextStyle(fontSize: 10, color: textColor)),
         ],
       ),
     );
@@ -285,7 +332,11 @@ class _RecommendationHistoryWidgetState extends State<RecommendationHistoryWidge
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           IconButton(
-            icon: Icon(Icons.chevron_left, size: 20, color: isDarkMode ? Colors.white70 : Colors.black54),
+            icon: Icon(
+              Icons.chevron_left,
+              size: 20,
+              color: isDarkMode ? Colors.white70 : Colors.black54,
+            ),
             onPressed: _currentPage > 0
                 ? () => setState(() => _currentPage--)
                 : null,
@@ -300,7 +351,11 @@ class _RecommendationHistoryWidgetState extends State<RecommendationHistoryWidge
             ),
           ),
           IconButton(
-            icon: Icon(Icons.chevron_right, size: 20, color: isDarkMode ? Colors.white70 : Colors.black54),
+            icon: Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: isDarkMode ? Colors.white70 : Colors.black54,
+            ),
             onPressed: _currentPage < _totalPages - 1
                 ? () => setState(() => _currentPage++)
                 : null,

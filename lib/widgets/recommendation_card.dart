@@ -8,8 +8,10 @@ class RecommendationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
+      color: isDarkMode ? const Color(0xFF1f2937) : Colors.white,
       child: ListTile(
         leading: Container(
           width: 50,

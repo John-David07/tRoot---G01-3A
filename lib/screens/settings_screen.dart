@@ -11,7 +11,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-
   void _resetData() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -48,17 +47,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
       // Clear SharedPreferences (app preferences)
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
-      
+
       // Clear AI cache and soil cache via CacheService
       await CacheService().clearAllCache();
-      
+
       // Clear recommendation history
       final recommendationHistoryService = RecommendationHistoryService();
       await recommendationHistoryService.clearAllHistory();
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('All local data has been reset. Restart the app for complete effect.'),
+          content: Text(
+            'All local data has been reset. Restart the app for complete effect.',
+          ),
           duration: Duration(seconds: 3),
         ),
       );
@@ -67,6 +68,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -76,9 +79,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             borderRadius: BorderRadius.circular(12),
             side: const BorderSide(color: Colors.red, width: 1),
           ),
+          color: isDarkMode ? const Color(0xFF1f2937) : Colors.white,
           child: ListTile(
-            title: const Text('Reset All Data', style: TextStyle(color: Colors.red)),
-            subtitle: const Text('Clear AI recommendations cache, soil analysis, and preferences'),
+            title: const Text(
+              'Reset All Data',
+              style: TextStyle(color: Colors.red),
+            ),
+            subtitle: const Text(
+              'Clear AI recommendations cache, soil analysis, and preferences',
+            ),
             trailing: ElevatedButton(
               onPressed: _resetData,
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -95,12 +104,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             borderRadius: BorderRadius.circular(12),
             side: const BorderSide(color: Color(0xFF4CAF50), width: 1),
           ),
+          color: isDarkMode ? const Color(0xFF1f2937) : Colors.white,
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('System Info', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text(
+                  'System Info',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
                 const SizedBox(height: 12),
                 _buildInfoRow('Firmware Version', 'v2.4.12-stable'),
                 _buildInfoRow('Hardware ID', 'EG-SENS-8842-X'),

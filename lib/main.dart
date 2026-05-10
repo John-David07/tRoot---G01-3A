@@ -6,7 +6,6 @@ import 'screens/dashboard_screen.dart';
 import 'screens/sensor_detail_screen.dart';
 import 'utils/theme_manager.dart';
 import 'firebase_options.dart';
-import 'screens/sensors_hub_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

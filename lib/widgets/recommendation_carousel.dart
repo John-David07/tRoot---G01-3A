@@ -4,10 +4,7 @@ import '../utils/theme_manager.dart';
 class RecommendationCarousel extends StatefulWidget {
   final List<Map<String, dynamic>> recommendations;
 
-  const RecommendationCarousel({
-    super.key,
-    required this.recommendations,
-  });
+  const RecommendationCarousel({super.key, required this.recommendations});
 
   @override
   State<RecommendationCarousel> createState() => _RecommendationCarouselState();
@@ -34,17 +31,22 @@ class _RecommendationCarouselState extends State<RecommendationCarousel> {
 
     final plant = widget.recommendations[_currentIndex];
 
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: const BorderSide(color: ThemeManager.primaryColor, width: 1),
       ),
+      color: isDarkMode ? const Color(0xFF1f2937) : Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('AI Plant Recommendation', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text(
+              'AI Plant Recommendation',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 16),
             Text(
               plant['name'] ?? 'Unknown Plant',
@@ -54,7 +56,11 @@ class _RecommendationCarouselState extends State<RecommendationCarousel> {
             const SizedBox(height: 8),
             Text(
               plant['scientificName'] ?? '',
-              style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic, color: Colors.grey.shade600),
+              style: TextStyle(
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+                color: Colors.grey.shade600,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -102,7 +108,9 @@ class _RecommendationCarouselState extends State<RecommendationCarousel> {
                     width: _currentIndex == index ? 16 : 6,
                     height: 6,
                     decoration: BoxDecoration(
-                      color: _currentIndex == index ? ThemeManager.primaryColor : Colors.grey.shade400,
+                      color: _currentIndex == index
+                          ? ThemeManager.primaryColor
+                          : Colors.grey.shade400,
                       borderRadius: BorderRadius.circular(3),
                     ),
                   );

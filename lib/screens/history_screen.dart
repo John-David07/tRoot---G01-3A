@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
-import '../utils/theme_manager.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -64,7 +63,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
       final soilData = soilSnapshot.value as Map<dynamic, dynamic>? ?? {};
       final tempData = tempSnapshot.value as Map<dynamic, dynamic>? ?? {};
-      final humidityData = humiditySnapshot.value as Map<dynamic, dynamic>? ?? {};
+      final humidityData =
+          humiditySnapshot.value as Map<dynamic, dynamic>? ?? {};
 
       final sensors = ['node_1', 'node_2', 'node_3', 'node_4', 'node_5'];
       final historyMap = <DateTime, HistoryRecord>{};
@@ -73,7 +73,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
         final sensorData = soilData[sensor];
         if (sensorData is Map) {
           sensorData.forEach((pushId, entry) {
-            if (entry is Map && entry.containsKey('value') && entry.containsKey('time')) {
+            if (entry is Map &&
+                entry.containsKey('value') &&
+                entry.containsKey('time')) {
               final timeStr = entry['time'].toString();
               final dateTime = _parseDateFromString(timeStr);
               final moistureValue = entry['value'] is int ? entry['value'] : 0;
@@ -102,10 +104,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
         if (entry.value is Map && (entry.value as Map).containsKey('value')) {
           final timeStr = (entry.value as Map)['time'].toString();
           final dateTime = _parseDateFromString(timeStr);
-          final tempValue = (entry.value as Map)['value'] is num 
-              ? ((entry.value as Map)['value'] as num).toDouble() 
+          final tempValue = (entry.value as Map)['value'] is num
+              ? ((entry.value as Map)['value'] as num).toDouble()
               : 0.0;
-          
+
           if (historyMap.containsKey(dateTime)) {
             historyMap[dateTime]!.temperature = tempValue;
           }
@@ -116,10 +118,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
         if (entry.value is Map && (entry.value as Map).containsKey('value')) {
           final timeStr = (entry.value as Map)['time'].toString();
           final dateTime = _parseDateFromString(timeStr);
-          final humidityValue = (entry.value as Map)['value'] is num 
-              ? ((entry.value as Map)['value'] as num).toDouble() 
+          final humidityValue = (entry.value as Map)['value'] is num
+              ? ((entry.value as Map)['value'] as num).toDouble()
               : 0.0;
-          
+
           if (historyMap.containsKey(dateTime)) {
             historyMap[dateTime]!.humidity = humidityValue;
           }
@@ -133,7 +135,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
         final older = i + 1 < historyList.length ? historyList[i + 1] : null;
         if (older != null) {
           for (var reading in older.sensorReadings) {
-            historyList[i].previousMoistureMap[reading.nodeId] = reading.moisture;
+            historyList[i].previousMoistureMap[reading.nodeId] =
+                reading.moisture;
           }
         }
       }
@@ -153,20 +156,31 @@ class _HistoryScreenState extends State<HistoryScreen> {
     var filtered = List<HistoryRecord>.from(_history);
 
     if (_selectedSensor != 'all') {
-      filtered = filtered.where((record) =>
-        record.sensorReadings.any((s) => s.nodeId == _selectedSensor)
-      ).toList();
+      filtered = filtered
+          .where(
+            (record) =>
+                record.sensorReadings.any((s) => s.nodeId == _selectedSensor),
+          )
+          .toList();
     }
 
     if (_startDate != null) {
-      filtered = filtered.where((record) =>
-        record.timestamp.isAfter(_startDate!.subtract(const Duration(days: 1)))
-      ).toList();
+      filtered = filtered
+          .where(
+            (record) => record.timestamp.isAfter(
+              _startDate!.subtract(const Duration(days: 1)),
+            ),
+          )
+          .toList();
     }
     if (_endDate != null) {
-      filtered = filtered.where((record) =>
-        record.timestamp.isBefore(_endDate!.add(const Duration(days: 1)))
-      ).toList();
+      filtered = filtered
+          .where(
+            (record) => record.timestamp.isBefore(
+              _endDate!.add(const Duration(days: 1)),
+            ),
+          )
+          .toList();
     }
 
     setState(() {
@@ -198,28 +212,48 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Map<String, dynamic> _getTrend(int current, int? previous) {
-    if (previous == null) return {'icon': '●', 'color': Colors.grey, 'text': '0%', 'change': 0};
+    if (previous == null)
+      return {'icon': '●', 'color': Colors.grey, 'text': '0%', 'change': 0};
     final change = current - previous;
-    if (change > 0) return {'icon': '▲', 'color': Colors.green, 'text': '+$change%', 'change': change};
-    if (change < 0) return {'icon': '▼', 'color': Colors.red, 'text': '$change%', 'change': change};
+    if (change > 0)
+      return {
+        'icon': '▲',
+        'color': Colors.green,
+        'text': '+$change%',
+        'change': change,
+      };
+    if (change < 0)
+      return {
+        'icon': '▼',
+        'color': Colors.red,
+        'text': '$change%',
+        'change': change,
+      };
     return {'icon': '●', 'color': Colors.grey, 'text': '0%', 'change': 0};
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    // Complementary root background for dark mode
+    final rootBg = isDarkMode
+        ? const Color(0xFF101A24)
+        : const Color(0xFFF5F7FA);
     final totalPages = (_filteredHistory.length / _recordsPerPage).ceil();
     final startIndex = (_currentPage - 1) * _recordsPerPage;
     final endIndex = startIndex + _recordsPerPage;
     final currentRecords = _filteredHistory.length > startIndex
-        ? _filteredHistory.sublist(startIndex, endIndex > _filteredHistory.length ? _filteredHistory.length : endIndex)
+        ? _filteredHistory.sublist(
+            startIndex,
+            endIndex > _filteredHistory.length
+                ? _filteredHistory.length
+                : endIndex,
+          )
         : [];
 
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('History'),
-      ),
+      backgroundColor: rootBg,
+      appBar: AppBar(title: const Text('History')),
       body: Column(
         children: [
           _buildFilterBar(),
@@ -227,13 +261,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : currentRecords.isEmpty
-                    ? const Center(child: Text('No records match your filters'))
-                    : ListView.builder(
-                        itemCount: currentRecords.length,
-                        itemBuilder: (context, index) {
-                          return _buildHistoryCard(currentRecords[index], isDarkMode);
-                        },
-                      ),
+                ? const Center(child: Text('No records match your filters'))
+                : ListView.builder(
+                    itemCount: currentRecords.length,
+                    itemBuilder: (context, index) {
+                      return _buildHistoryCard(
+                        currentRecords[index],
+                        isDarkMode,
+                      );
+                    },
+                  ),
           ),
           if (totalPages > 1) _buildPagination(totalPages),
         ],
@@ -242,18 +279,33 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Widget _buildFilterBar() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    // Complementary root background for dark mode
+    final rootBg = isDarkMode
+        ? const Color(0xFF101A24)
+        : const Color(0xFFF5F7FA);
     final sensors = ['all', 'Node_1', 'Node_2', 'Node_3', 'Node_4', 'Node_5'];
 
     return Container(
+      color: rootBg,
       padding: const EdgeInsets.all(12),
-      color: Theme.of(context).scaffoldBackgroundColor,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           DropdownButtonFormField<String>(
             value: _selectedSensor,
-            decoration: const InputDecoration(labelText: 'Sensor', border: OutlineInputBorder()),
-            items: sensors.map((s) => DropdownMenuItem(value: s, child: Text(s == 'all' ? 'All Sensors' : s))).toList(),
+            decoration: const InputDecoration(
+              labelText: 'Sensor',
+              border: OutlineInputBorder(),
+            ),
+            items: sensors
+                .map(
+                  (s) => DropdownMenuItem(
+                    value: s,
+                    child: Text(s == 'all' ? 'All Sensors' : s),
+                  ),
+                )
+                .toList(),
             onChanged: (value) => setState(() {
               _selectedSensor = value!;
               _applyFilters();
@@ -277,8 +329,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     }
                   },
                   child: InputDecorator(
-                    decoration: const InputDecoration(labelText: 'From Date', border: OutlineInputBorder()),
-                    child: Text(_startDate != null ? '${_startDate!.month}/${_startDate!.day}/${_startDate!.year}' : 'Select date'),
+                    decoration: const InputDecoration(
+                      labelText: 'From Date',
+                      border: OutlineInputBorder(),
+                    ),
+                    child: Text(
+                      _startDate != null
+                          ? '${_startDate!.month}/${_startDate!.day}/${_startDate!.year}'
+                          : 'Select date',
+                    ),
                   ),
                 ),
               ),
@@ -298,19 +357,33 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     }
                   },
                   child: InputDecorator(
-                    decoration: const InputDecoration(labelText: 'To Date', border: OutlineInputBorder()),
-                    child: Text(_endDate != null ? '${_endDate!.month}/${_endDate!.day}/${_endDate!.year}' : 'Select date'),
+                    decoration: const InputDecoration(
+                      labelText: 'To Date',
+                      border: OutlineInputBorder(),
+                    ),
+                    child: Text(
+                      _endDate != null
+                          ? '${_endDate!.month}/${_endDate!.day}/${_endDate!.year}'
+                          : 'Select date',
+                    ),
                   ),
                 ),
               ),
             ],
           ),
-          if (_selectedSensor != 'all' || _startDate != null || _endDate != null)
+          if (_selectedSensor != 'all' ||
+              _startDate != null ||
+              _endDate != null)
             const SizedBox(height: 8),
-          if (_selectedSensor != 'all' || _startDate != null || _endDate != null)
+          if (_selectedSensor != 'all' ||
+              _startDate != null ||
+              _endDate != null)
             ElevatedButton(
               onPressed: _clearFilters,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.grey.shade300, foregroundColor: Colors.black),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.grey.shade300,
+                foregroundColor: Colors.black,
+              ),
               child: const Text('Clear All Filters'),
             ),
         ],
@@ -325,6 +398,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         borderRadius: BorderRadius.circular(12),
         side: const BorderSide(color: Color(0xFF4CAF50), width: 1),
       ),
+      color: isDarkMode ? const Color(0xFF1f2937) : Colors.white,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -332,84 +406,148 @@ class _HistoryScreenState extends State<HistoryScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade100,
-              borderRadius: const BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
+              color: isDarkMode ? const Color.fromARGB(255, 37, 60, 82) : Colors.grey.shade100,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
             ),
             child: Text(
               _formatDate(record.timestamp),
-              style: TextStyle(fontWeight: FontWeight.w500, color: isDarkMode ? Colors.white : Colors.black87),
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: isDarkMode ? Colors.white : Colors.black87,
+              ),
             ),
           ),
           ...record.sensorReadings
-              .where((s) => _selectedSensor == 'all' || s.nodeId == _selectedSensor)
+              .where(
+                (s) => _selectedSensor == 'all' || s.nodeId == _selectedSensor,
+              )
               .map((sensor) {
-            final status = _getCondition(sensor.moisture);
-            final color = _getConditionColor(sensor.moisture);
-            final trend = _getTrend(sensor.moisture, record.previousMoistureMap[sensor.nodeId]);
-            return Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                final status = _getCondition(sensor.moisture);
+                final color = _getConditionColor(sensor.moisture);
+                final trend = _getTrend(
+                  sensor.moisture,
+                  record.previousMoistureMap[sensor.nodeId],
+                );
+                return Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(sensor.nodeId, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: color),
-                        ),
-                        child: Text(status, style: TextStyle(color: color, fontSize: 12)),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            sensor.nodeId,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: color.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: color),
+                            ),
+                            child: Text(
+                              status,
+                              style: TextStyle(color: color, fontSize: 12),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('${sensor.moisture}%', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                            const Text('Moisture', style: TextStyle(fontSize: 12)),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(trend['icon'], style: TextStyle(color: trend['color'])),
-                                const SizedBox(width: 4),
-                                Text(trend['text'], style: TextStyle(color: trend['color'], fontSize: 12)),
+                                Text(
+                                  '${sensor.moisture}%',
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const Text(
+                                  'Moisture',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      trend['icon'],
+                                      style: TextStyle(color: trend['color']),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      trend['text'],
+                                      style: TextStyle(
+                                        color: trend['color'],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(record.temperature > 0 ? '${record.temperature.toInt()}°C' : '--', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                            const Text('Temp', style: TextStyle(fontSize: 12)),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(record.humidity > 0 ? '${record.humidity.toInt()}%' : '--', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                            const Text('Humidity', style: TextStyle(fontSize: 12)),
-                          ],
-                        ),
+                          ),
+                          Expanded(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  record.temperature > 0
+                                      ? '${record.temperature.toInt()}°C'
+                                      : '--',
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const Text(
+                                  'Temp',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  record.humidity > 0
+                                      ? '${record.humidity.toInt()}%'
+                                      : '--',
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const Text(
+                                  'Humidity',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            );
-          }).toList(),
+                );
+              })
+              .toList(),
         ],
       ),
     );
@@ -423,12 +561,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
         children: [
           IconButton(
             icon: const Icon(Icons.chevron_left),
-            onPressed: _currentPage > 1 ? () => setState(() => _currentPage--) : null,
+            onPressed: _currentPage > 1
+                ? () => setState(() => _currentPage--)
+                : null,
           ),
           Text('Page $_currentPage of $totalPages'),
           IconButton(
             icon: const Icon(Icons.chevron_right),
-            onPressed: _currentPage < totalPages ? () => setState(() => _currentPage++) : null,
+            onPressed: _currentPage < totalPages
+                ? () => setState(() => _currentPage++)
+                : null,
           ),
         ],
       ),

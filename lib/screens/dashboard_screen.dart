@@ -28,7 +28,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    // Complementary root background for dark mode
+    final rootBg = isDarkMode
+        ? const Color(0xFF101A24)
+        : const Color(0xFFF5F7FA);
     return Scaffold(
+      backgroundColor: rootBg,
       appBar: AppBar(
         title: const Text('Soil Monitor'),
         actions: [
@@ -60,7 +66,7 @@ class DashboardCarousel extends StatefulWidget {
 
 class _DashboardCarouselState extends State<DashboardCarousel> {
   final DatabaseService _dbService = DatabaseService();
-  
+
   List<String> _nodes = [];
 
   @override
@@ -77,12 +83,13 @@ class _DashboardCarouselState extends State<DashboardCarousel> {
         }
 
         final data = snapshot.data!;
-        
-        _nodes = data.getNodes()..sort((a, b) {
-          int numA = int.tryParse(a.replaceAll('Node_', '')) ?? 0;
-          int numB = int.tryParse(b.replaceAll('Node_', '')) ?? 0;
-          return numA.compareTo(numB);
-        });
+
+        _nodes = data.getNodes()
+          ..sort((a, b) {
+            int numA = int.tryParse(a.replaceAll('Node_', '')) ?? 0;
+            int numB = int.tryParse(b.replaceAll('Node_', '')) ?? 0;
+            return numA.compareTo(numB);
+          });
 
         if (_nodes.isEmpty) {
           return const Center(child: Text('No sensors found'));
@@ -104,6 +111,7 @@ class _DashboardCarouselState extends State<DashboardCarousel> {
   }
 
   Widget _buildSmartInsightCard(SensorData data) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Card(
@@ -111,12 +119,16 @@ class _DashboardCarouselState extends State<DashboardCarousel> {
           borderRadius: BorderRadius.circular(12),
           side: const BorderSide(color: ThemeManager.primaryColor, width: 1),
         ),
+        color: isDarkMode ? const Color(0xFF1f2937) : Colors.white,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Smart Insight', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text(
+                'Smart Insight',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(12),
