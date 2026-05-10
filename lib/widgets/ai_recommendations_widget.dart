@@ -85,8 +85,30 @@ class _AiRecommendationsWidgetState extends State<AiRecommendationsWidget> {
     return 'Dry';
   }
 
+  // Helper method to check if recommendations are fallbacks - MUST be declared BEFORE it's used
+  bool _isFallbackRecommendation(List<Map<String, dynamic>> recommendations) {
+    if (recommendations.isEmpty) return true;
+    
+    final fallbackNames = ['Snake Plant', 'ZZ Plant', 'Pothos'];
+    
+    for (var rec in recommendations) {
+      final name = rec['name'] ?? '';
+      if (!fallbackNames.contains(name)) {
+        return false; // Found a non-fallback plant
+      }
+    }
+    
+    return true; // All plants are from the fallback list
+  }
+
   Future<void> _recordToHistoryIfNeeded(String sensorId, int moisture, double temp, double humidity, List<Map<String, dynamic>> recommendations) async {
     if (recommendations.isEmpty) return;
+    
+    // Don't record fallback recommendations
+    if (_isFallbackRecommendation(recommendations)) {
+      print('📝 Skipping fallback recommendations from history');
+      return;
+    }
     
     final moistureStatus = _getMoistureStatus(moisture);
     
@@ -124,7 +146,7 @@ class _AiRecommendationsWidgetState extends State<AiRecommendationsWidget> {
         });
       }
       
-      // Record to history (service will handle duplicate detection)
+      // Record to history if not fallback (service will handle duplicate detection)
       await _recordToHistoryIfNeeded(sensorId, currentMoisture, currentTemp, currentHumidity, cachedRecs);
       
       setState(() => _isLoading = false);
@@ -143,7 +165,7 @@ class _AiRecommendationsWidgetState extends State<AiRecommendationsWidget> {
     setState(() => _isLoading = true);
     
     // This is an ACTUAL API call
-    final recommendations = await _geminiService.getRecommendations(
+    final result = await _geminiService.getRecommendations(
       moisture: currentMoisture,
       temperature: currentTemp,
       humidity: currentHumidity,
@@ -151,14 +173,18 @@ class _AiRecommendationsWidgetState extends State<AiRecommendationsWidget> {
     
     if (mounted) {
       // Store in cache
-      _cacheService.setAiCache(currentMoisture, currentTemp, currentHumidity, recommendations);
+      _cacheService.setAiCache(currentMoisture, currentTemp, currentHumidity, result.recommendations);
       setState(() {
-        _recommendations = recommendations;
+        _recommendations = result.recommendations;
         _isLoading = false;
       });
       
-      // Record to history (service will handle duplicate detection)
-      await _recordToHistoryIfNeeded(sensorId, currentMoisture, currentTemp, currentHumidity, recommendations);
+      // Only record to history if it's NOT a fallback
+      if (!result.isFallback) {
+        await _recordToHistoryIfNeeded(sensorId, currentMoisture, currentTemp, currentHumidity, result.recommendations);
+      } else {
+        print('📝 Skipping fallback recommendations from history');
+      }
     }
   }
 

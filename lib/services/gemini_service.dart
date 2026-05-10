@@ -1,7 +1,17 @@
+// lib/services/gemini_service.dart (UPDATED COMPLETE FILE)
+
 import 'dart:convert';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+// Add this class to return both recommendations and a flag
+class RecommendationResult {
+  final List<Map<String, dynamic>> recommendations;
+  final bool isFallback;
+  
+  RecommendationResult({required this.recommendations, required this.isFallback});
+}
 
 class GeminiService {
   static String get _apiKey {
@@ -12,14 +22,14 @@ class GeminiService {
     return key;
   }
   
-  Future<List<Map<String, dynamic>>> getRecommendations({
+  Future<RecommendationResult> getRecommendations({
     required int moisture,
     required double temperature,
     required double humidity,
   }) async {
     try {
       final model = GenerativeModel(
-        model: 'gemini-2.5-flash-lite',
+        model: 'gemini-2.5-flash',
         apiKey: _apiKey,
         generationConfig: GenerationConfig(
           responseMimeType: 'application/json',
@@ -58,21 +68,37 @@ Return ONLY valid JSON in this exact format:
       final response = await model.generateContent([Content.text(prompt)]);
 
       if (response.text == null) {
-        return _getFallbackRecommendations();
+        return RecommendationResult(
+          recommendations: _getFallbackRecommendations(),
+          isFallback: true,
+        );
       }
 
       final recommendations = _parseRecommendations(response.text!);
-      return recommendations.isNotEmpty ? recommendations : _getFallbackRecommendations();
+      if (recommendations.isNotEmpty) {
+        return RecommendationResult(
+          recommendations: recommendations,
+          isFallback: false,
+        );
+      } else {
+        return RecommendationResult(
+          recommendations: _getFallbackRecommendations(),
+          isFallback: true,
+        );
+      }
     } catch (e) {
       print('Recommendations error: $e');
-      return _getFallbackRecommendations();
+      return RecommendationResult(
+        recommendations: _getFallbackRecommendations(),
+        isFallback: true,
+      );
     }
   }
   
   Future<Map<String, String>> getSoilInfoFromImage(XFile imageFile) async {
     try {
       final model = GenerativeModel(
-        model: 'gemini-2.5-flash-lite',
+        model: 'gemini-2.5-flash',
         apiKey: _apiKey,
       );
       

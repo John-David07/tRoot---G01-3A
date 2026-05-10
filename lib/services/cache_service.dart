@@ -1,3 +1,5 @@
+// lib/services/cache_service.dart (UPDATED with persistence)
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
@@ -15,14 +17,66 @@ class CacheService {
   // Soil cache keys
   static const String _soilImageKeyPrefix = 'soil_image_';
   static const String _soilInfoKeyPrefix = 'soil_info_';
+  static const String _aiCacheKey = 'ai_recommendations_cache';
+  static const String _lastMoistureKey = 'last_fetched_moisture';
+
+  Future<void> loadPersistedCache() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Load AI cache
+    final aiCacheJson = prefs.getString(_aiCacheKey);
+    if (aiCacheJson != null) {
+      try {
+        final Map<String, dynamic> decoded = json.decode(aiCacheJson);
+        decoded.forEach((key, value) {
+          _aiCache[key] = List<Map<String, dynamic>>.from(value);
+        });
+        print('✅ Loaded ${_aiCache.length} cached recommendations from disk');
+      } catch (e) {
+        print('Error loading AI cache: $e');
+      }
+    }
+    
+    // Load last fetched moisture values
+    final lastMoistureJson = prefs.getString(_lastMoistureKey);
+    if (lastMoistureJson != null) {
+      try {
+        final Map<String, dynamic> decoded = json.decode(lastMoistureJson);
+        decoded.forEach((key, value) {
+          _lastFetchedMoisture[key] = value as int;
+        });
+        print('✅ Loaded ${_lastFetchedMoisture.length} last moisture values from disk');
+      } catch (e) {
+        print('Error loading last moisture values: $e');
+      }
+    }
+  }
+
+  Future<void> _persistAiCache() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonMap = <String, dynamic>{};
+    _aiCache.forEach((key, value) {
+      jsonMap[key] = value;
+    });
+    await prefs.setString(_aiCacheKey, json.encode(jsonMap));
+  }
+
+  Future<void> _persistLastMoisture() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastMoistureKey, json.encode(_lastFetchedMoisture));
+  }
 
   Future<void> clearAllCache() async {
     // Clear in-memory AI cache
     _aiCache.clear();
     _lastFetchedMoisture.clear();
     
-    // Clear persisted soil cache from SharedPreferences
+    // Clear persisted cache from SharedPreferences
     final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_aiCacheKey);
+    await prefs.remove(_lastMoistureKey);
+    
+    // Clear soil cache
     final allKeys = prefs.getKeys();
     for (var key in allKeys) {
       if (key.startsWith(_soilImageKeyPrefix) || key.startsWith(_soilInfoKeyPrefix)) {
@@ -54,6 +108,8 @@ class CacheService {
   void setAiCache(int moisture, double temperature, double humidity, List<Map<String, dynamic>> recommendations) {
     final key = _getConditionKey(moisture, temperature, humidity);
     _aiCache[key] = recommendations;
+    _persistAiCache(); // Save to disk immediately
+    print('💾 Cached recommendations for condition: $key');
   }
 
   bool shouldSkipDueToDeadband(String sensorId, int currentMoisture) {
@@ -64,6 +120,7 @@ class CacheService {
 
   void updateLastFetchedMoisture(String sensorId, int moisture) {
     _lastFetchedMoisture[sensorId] = moisture;
+    _persistLastMoisture(); // Save to disk immediately
   }
 
   // Soil Cache methods
