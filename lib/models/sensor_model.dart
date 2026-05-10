@@ -35,8 +35,7 @@ class SensorData {
     int moisture = getNodeMoisture(node);
     if (moisture > 80) return 'Saturated';
     if (moisture > 40) return 'Optimal';
-    if (moisture > 10) return 'Dry';
-    return 'Critical';
+    return 'Dry';
   }
 
   // Average soil moisture (if needed)

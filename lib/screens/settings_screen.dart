@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/cache_service.dart';
+import '../services/recommendation_history_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -24,6 +25,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           'The following data will be permanently cleared:\n'
           '• AI-generated plant recommendations (cached)\n'
           '• Uploaded soil analysis results and images\n'
+          '• Plant recommendation history\n'
           '• All locally stored preferences\n\n'
           'Your ESP32 sensor readings and historical data will NOT be affected.\n\n'
           'Are you sure you want to proceed?',
@@ -49,6 +51,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       
       // Clear AI cache and soil cache via CacheService
       await CacheService().clearAllCache();
+      
+      // Clear recommendation history
+      final recommendationHistoryService = RecommendationHistoryService();
+      await recommendationHistoryService.clearAllHistory();
       
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

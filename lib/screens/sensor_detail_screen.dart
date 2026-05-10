@@ -8,6 +8,7 @@ import 'dart:convert';
 import '../services/database_service.dart';
 import '../services/gemini_service.dart';
 import '../utils/theme_manager.dart';
+import '../widgets/recommendation_history_widget.dart';
 
 class SensorDetailScreen extends StatefulWidget {
   const SensorDetailScreen({super.key});
@@ -551,6 +552,19 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
             ),
 
             const SizedBox(height: 40),
+
+            RecommendationHistoryWidget(
+              sensorId: nodeId,
+              onResetHistory: () {
+                // Optional: Additional callback when history is cleared
+                if (mounted) {
+                  setState(() {});
+                }
+              },
+            ),
+
+            const SizedBox(height: 40),
+
           ],
         ),
       ),

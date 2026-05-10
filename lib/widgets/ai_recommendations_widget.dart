@@ -4,7 +4,9 @@ import '../services/database_service.dart';
 import '../services/gemini_service.dart';
 import '../services/sensor_change_service.dart';
 import '../services/cache_service.dart';
+import '../services/recommendation_history_service.dart';
 import '../models/sensor_data.dart';
+import '../models/recommendation_history.dart';
 import 'recommendation_carousel.dart';
 import '../utils/theme_manager.dart';
 
@@ -19,6 +21,7 @@ class _AiRecommendationsWidgetState extends State<AiRecommendationsWidget> {
   final DatabaseService _dbService = DatabaseService();
   final GeminiService _geminiService = GeminiService();
   final CacheService _cacheService = CacheService();
+  final RecommendationHistoryService _historyService = RecommendationHistoryService();
   
   int _currentSensorIndex = 0;
   List<String> _nodes = [];
@@ -27,7 +30,11 @@ class _AiRecommendationsWidgetState extends State<AiRecommendationsWidget> {
   List<Map<String, dynamic>> _recommendations = [];
   bool _isLoading = false;
   
+  // Debouncer timer
+  Timer? _debounceTimer;
+  
   late StreamSubscription _sensorSubscription;
+  late StreamSubscription _dataSubscription;
 
   @override
   void initState() {
@@ -35,7 +42,7 @@ class _AiRecommendationsWidgetState extends State<AiRecommendationsWidget> {
     _sensorSubscription = SensorChangeService.sensorChanges.listen((index) {
       if (_currentSensorIndex != index) {
         _currentSensorIndex = index;
-        _loadRecommendations();
+        _debouncedLoadRecommendations();
       }
     });
     _loadSensorData();
@@ -44,11 +51,13 @@ class _AiRecommendationsWidgetState extends State<AiRecommendationsWidget> {
   @override
   void dispose() {
     _sensorSubscription.cancel();
+    _dataSubscription.cancel();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
   void _loadSensorData() {
-    _dbService.getCurrentData().listen((data) {
+    _dataSubscription = _dbService.getCurrentData().listen((data) {
       if (mounted) {
         setState(() {
           _sensorData = data;
@@ -58,9 +67,43 @@ class _AiRecommendationsWidgetState extends State<AiRecommendationsWidget> {
             return numA.compareTo(numB);
           });
         });
-        _loadRecommendations();
+        _debouncedLoadRecommendations();
       }
     });
+  }
+
+  void _debouncedLoadRecommendations() {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _loadRecommendations();
+    });
+  }
+
+  String _getMoistureStatus(int moisture) {
+    if (moisture > 80) return 'Saturated';
+    if (moisture > 40) return 'Optimal';
+    return 'Dry';
+  }
+
+  Future<void> _recordToHistoryIfNeeded(String sensorId, int moisture, double temp, double humidity, List<Map<String, dynamic>> recommendations) async {
+    if (recommendations.isEmpty) return;
+    
+    final moistureStatus = _getMoistureStatus(moisture);
+    
+    for (var rec in recommendations) {
+      final entry = RecommendationHistoryEntry(
+        name: rec['name'] ?? 'Unknown Plant',
+        scientificName: rec['scientificName'] ?? '',
+        reason: rec['reason'] ?? '',
+        dateRecommended: DateTime.now(),
+        moisture: moisture,
+        moistureStatus: moistureStatus,
+        temperature: temp,
+        humidity: humidity,
+      );
+      // The service will handle duplicate detection
+      await _historyService.addHistoryEntry(sensorId, entry);
+    }
   }
 
   Future<void> _loadRecommendations() async {
@@ -73,14 +116,22 @@ class _AiRecommendationsWidgetState extends State<AiRecommendationsWidget> {
     
     // Check condition-based cache first
     if (_cacheService.hasAiCache(currentMoisture, currentTemp, currentHumidity)) {
-      setState(() {
-        _recommendations = _cacheService.getAiCache(currentMoisture, currentTemp, currentHumidity)!;
-        _isLoading = false;
-      });
+      final cachedRecs = _cacheService.getAiCache(currentMoisture, currentTemp, currentHumidity)!;
+      
+      if (_recommendations != cachedRecs) {
+        setState(() {
+          _recommendations = cachedRecs;
+        });
+      }
+      
+      // Record to history (service will handle duplicate detection)
+      await _recordToHistoryIfNeeded(sensorId, currentMoisture, currentTemp, currentHumidity, cachedRecs);
+      
+      setState(() => _isLoading = false);
       return;
     }
     
-    // Deadband check
+    // Deadband check - only fetch from API if moisture changed significantly
     if (_cacheService.shouldSkipDueToDeadband(sensorId, currentMoisture)) {
       print('📡 Deadband ignored: moisture change less than 10%');
       return;
@@ -91,6 +142,7 @@ class _AiRecommendationsWidgetState extends State<AiRecommendationsWidget> {
     
     setState(() => _isLoading = true);
     
+    // This is an ACTUAL API call
     final recommendations = await _geminiService.getRecommendations(
       moisture: currentMoisture,
       temperature: currentTemp,
@@ -104,6 +156,9 @@ class _AiRecommendationsWidgetState extends State<AiRecommendationsWidget> {
         _recommendations = recommendations;
         _isLoading = false;
       });
+      
+      // Record to history (service will handle duplicate detection)
+      await _recordToHistoryIfNeeded(sensorId, currentMoisture, currentTemp, currentHumidity, recommendations);
     }
   }
 
