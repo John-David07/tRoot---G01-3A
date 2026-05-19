@@ -1,3 +1,5 @@
+// lib/screens/dashboard_screen.dart (UPDATED)
+
 import 'package:flutter/material.dart';
 import '../services/database_service.dart';
 import '../models/sensor_data.dart';
@@ -8,6 +10,8 @@ import '../utils/theme_manager.dart';
 import 'sensors_hub_screen.dart';
 import 'history_screen.dart';
 import 'settings_screen.dart';
+import '../widgets/notification_bell.dart';
+import '../services/notification_checker.dart';  // ADD THIS
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -37,11 +41,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       backgroundColor: rootBg,
       appBar: AppBar(
         title: const Text('Soil Monitor'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {},
-          ),
+        actions: const [
+          NotificationBell(),  // Only one notification icon now
         ],
       ),
       body: _screens[_currentIndex],
@@ -66,8 +67,15 @@ class DashboardCarousel extends StatefulWidget {
 
 class _DashboardCarouselState extends State<DashboardCarousel> {
   final DatabaseService _dbService = DatabaseService();
-
+  late final NotificationChecker _notificationChecker;  // ADD THIS
   List<String> _nodes = [];
+
+  @override
+  void initState() {  // ADD THIS INITSTATE
+    super.initState();
+    _notificationChecker = NotificationChecker();
+    _notificationChecker.initializeAndCheck();
+  }
 
   @override
   Widget build(BuildContext context) {
