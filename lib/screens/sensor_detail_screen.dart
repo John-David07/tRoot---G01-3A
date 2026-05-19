@@ -307,7 +307,7 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
                         condition,
                         style: TextStyle(
                           color: color,
-                          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
@@ -470,9 +470,64 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
                           height: 250,
                           child: LineChart(
                             LineChartData(
-                              gridData: const FlGridData(show: true),
-                              titlesData: const FlTitlesData(show: true),
-                              borderData: FlBorderData(show: true),
+                              // Hide grid lines
+                              gridData: const FlGridData(show: false),
+                              // Customize titles - only left and bottom
+                              titlesData: FlTitlesData(
+                                show: true,
+                                // Left side - Moisture percentage
+                                leftTitles: AxisTitles(
+                                  sideTitles: SideTitles(
+                                    showTitles: true,
+                                    reservedSize: 40,
+                                    interval: 20,
+                                    getTitlesWidget: (value, meta) {
+                                      return Text(
+                                        '${value.toInt()}%',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: isDarkMode ? Colors.white70 : Colors.black54,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                // Right side - hidden
+                                rightTitles: const AxisTitles(
+                                  sideTitles: SideTitles(showTitles: false),
+                                ),
+                                // Top side - hidden
+                                topTitles: const AxisTitles(
+                                  sideTitles: SideTitles(showTitles: false),
+                                ),
+                                // Bottom side - Reading numbers
+                                bottomTitles: AxisTitles(
+                                  sideTitles: SideTitles(
+                                    showTitles: true,
+                                    reservedSize: 30,
+                                    interval: 2,
+                                    getTitlesWidget: (value, meta) {
+                                      return Padding(
+                                        padding: const EdgeInsets.only(top: 8),
+                                        child: Text(
+                                          '${value.toInt() + 1}',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: isDarkMode ? Colors.white70 : Colors.black54,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                              borderData: FlBorderData(
+                                show: true,
+                                border: Border.all(
+                                  color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
+                                  width: 1,
+                                ),
+                              ),
                               lineBarsData: [
                                 LineChartBarData(
                                   spots: spots,

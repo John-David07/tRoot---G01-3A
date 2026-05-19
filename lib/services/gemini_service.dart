@@ -1,5 +1,3 @@
-// lib/services/gemini_service.dart (UPDATED COMPLETE FILE)
-
 import 'dart:convert';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:image_picker/image_picker.dart';
@@ -54,13 +52,32 @@ For each plant, provide:
 1. Plant name
 2. Scientific name
 3. One sentence explaining why it matches these conditions
+4. Complete plant care guide including:
+   - Light requirements
+   - Watering frequency
+   - Ideal temperature range
+   - Humidity preferences
+   - Soil type
+   - Fertilizer needs
+   - Pro tips for beginners
+   - Common problems to watch for
 
 Return ONLY valid JSON in this exact format:
 [
   {
     "name": "Plant Name",
     "scientificName": "Scientificus name",
-    "reason": "Brief reason why this plant matches the conditions."
+    "reason": "Brief reason why this plant matches the conditions.",
+    "care": {
+      "light": "Light requirements",
+      "water": "Watering frequency and amount",
+      "temperature": "Ideal temperature range in °C",
+      "humidity": "Humidity preferences",
+      "soil": "Soil type and mix recommendations",
+      "fertilizer": "Fertilizer type and frequency",
+      "tips": "Pro tips for beginners",
+      "commonProblems": "Common issues to watch for (as a comma-separated string)"
+    }
   }
 ]
 ''';
@@ -204,17 +221,47 @@ Or for invalid images:
       {
         'name': 'Snake Plant',
         'scientificName': 'Sansevieria trifasciata',
-        'reason': 'Extremely adaptable and tolerates a wide range of conditions.'
+        'reason': 'Extremely adaptable and tolerates a wide range of conditions.',
+        'care': {
+          'light': 'Low to bright indirect light. Avoid direct sunlight.',
+          'water': 'Water every 2-6 weeks. Let soil dry completely between waterings.',
+          'temperature': '18-27°C (65-80°F)',
+          'humidity': 'Low to moderate. Very adaptable.',
+          'soil': 'Well-draining cactus/succulent mix.',
+          'fertilizer': 'Fertilize once in spring and summer with cactus fertilizer.',
+          'tips': 'Very hard to kill! Perfect for beginners. Wipe leaves occasionally.',
+          'commonProblems': 'Overwatering (yellow leaves), Cold damage, Root rot',
+        },
       },
       {
         'name': 'ZZ Plant',
         'scientificName': 'Zamioculcas zamiifolia',
-        'reason': 'Survives in low light and irregular watering schedules.'
+        'reason': 'Survives in low light and irregular watering schedules.',
+        'care': {
+          'light': 'Low to bright indirect light. Very shade tolerant.',
+          'water': 'Water every 2-3 weeks. Allow soil to dry completely.',
+          'temperature': '18-24°C (65-75°F)',
+          'humidity': 'Low to high. Very adaptable.',
+          'soil': 'Well-draining potting mix with perlite.',
+          'fertilizer': 'Fertilize 2-3 times per year with balanced fertilizer.',
+          'tips': 'Drought tolerant. Wipe leaves to keep them shiny.',
+          'commonProblems': 'Yellow leaves (overwatering), Root rot, Slow growth',
+        },
       },
       {
         'name': 'Pothos',
         'scientificName': 'Epipremnum aureum',
-        'reason': 'Very forgiving plant that adapts to most indoor environments.'
+        'reason': 'Very forgiving plant that adapts to most indoor environments.',
+        'care': {
+          'light': 'Low to bright indirect light. Variegation needs more light.',
+          'water': 'Water when top 2 inches of soil are dry.',
+          'temperature': '18-29°C (65-85°F)',
+          'humidity': 'Moderate to high. Benefits from occasional misting.',
+          'soil': 'Well-draining potting mix.',
+          'fertilizer': 'Fertilize monthly during growing season.',
+          'tips': 'Trailing or climbing. Propagate easily from cuttings.',
+          'commonProblems': 'Brown leaves (underwatering), Yellow leaves (overwatering), Leggy growth (not enough light)',
+        },
       },
     ];
   }

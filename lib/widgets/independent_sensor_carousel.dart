@@ -21,6 +21,7 @@ class _IndependentSensorCarouselState extends State<IndependentSensorCarousel> {
   Timer? _autoCycleTimer;
   List<String> _nodes = [];
   SensorData? _sensorData;
+  bool _isPaused = false;
 
   @override
   void initState() {
@@ -58,9 +59,9 @@ class _IndependentSensorCarouselState extends State<IndependentSensorCarousel> {
 
   void _startAutoCycle() {
     _autoCycleTimer?.cancel();
-    if (_nodes.isNotEmpty) {
+    if (_nodes.isNotEmpty && !_isPaused) {
       _autoCycleTimer = Timer.periodic(const Duration(seconds: 6), (timer) {
-        if (mounted && _nodes.isNotEmpty && _pageController.hasClients) {
+        if (mounted && _nodes.isNotEmpty && _pageController.hasClients && !_isPaused) {
           final newIndex = (_currentIndex + 1) % _nodes.length;
           _pageController.animateToPage(
             newIndex,
@@ -72,13 +73,21 @@ class _IndependentSensorCarouselState extends State<IndependentSensorCarousel> {
     }
   }
 
+  void _togglePause() {
+    setState(() {
+      _isPaused = !_isPaused;
+      if (!_isPaused) {
+        _startAutoCycle();
+      }
+    });
+  }
+
   void _onPageChanged(int index) {
     if (_currentIndex == index) return;
     print('🔄 CAROUSEL: Page changed to index $index (${_nodes[index]})');
     setState(() {
       _currentIndex = index;
     });
-    // BROADCAST to service so recommendations widget can listen
     SensorChangeService.notifySensorChanged(index);
   }
 
@@ -214,7 +223,7 @@ class _IndependentSensorCarouselState extends State<IndependentSensorCarousel> {
                                   children: [
                                     Icon(
                                       Icons.thermostat,
-                                      size: 28,
+                                      size: 20,
                                       color: const Color.fromARGB(255, 255, 0, 76),
                                     ),
                                     const SizedBox(width: 8),
@@ -254,7 +263,7 @@ class _IndependentSensorCarouselState extends State<IndependentSensorCarousel> {
                                   children: [
                                     Icon(
                                       Icons.water_drop,
-                                      size: 28,
+                                      size: 20,
                                       color: const Color.fromARGB(255, 0, 191, 255),
                                     ),
                                     const SizedBox(width: 8),
@@ -292,8 +301,9 @@ class _IndependentSensorCarouselState extends State<IndependentSensorCarousel> {
             },
           ),
         ),
+        // Pagination Indicators
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(_nodes.length, (index) {
@@ -318,6 +328,30 @@ class _IndependentSensorCarouselState extends State<IndependentSensorCarousel> {
                 ),
               );
             }),
+          ),
+        ),
+        // Pause/Play Button - Centered below pagination
+        Padding(
+          padding: const EdgeInsets.only(top: 4, bottom: 12),
+          child: Center(
+            child: Container(
+              decoration: BoxDecoration(
+                color: ThemeManager.primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(color: ThemeManager.primaryColor),
+              ),
+              child: IconButton(
+                icon: Icon(
+                  _isPaused ? Icons.play_arrow : Icons.pause,
+                  color: ThemeManager.primaryColor,
+                  size: 24,
+                ),
+                onPressed: _togglePause,
+                tooltip: _isPaused ? 'Resume auto-cycling' : 'Pause auto-cycling',
+                padding: const EdgeInsets.all(10),
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              ),
+            ),
           ),
         ),
       ],
