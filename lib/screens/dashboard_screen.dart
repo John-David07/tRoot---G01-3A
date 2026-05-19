@@ -1,5 +1,3 @@
-// lib/screens/dashboard_screen.dart (UPDATED)
-
 import 'package:flutter/material.dart';
 import '../services/database_service.dart';
 import '../models/sensor_data.dart';
@@ -11,7 +9,7 @@ import 'sensors_hub_screen.dart';
 import 'history_screen.dart';
 import 'settings_screen.dart';
 import '../widgets/notification_bell.dart';
-import '../services/notification_checker.dart';  // ADD THIS
+import '../services/notification_checker.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -40,9 +38,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       backgroundColor: rootBg,
       appBar: AppBar(
-        title: const Text('Soil Monitor'),
+        title: Row(
+          children: [
+            // Logo
+            Image.asset(
+              'assets/images/favicon.png',
+              height: 32,
+              width: 32,
+              errorBuilder: (context, error, stackTrace) {
+                // Fallback icon if image not found
+                return Icon(
+                  Icons.eco,
+                  size: 28,
+                  color: isDarkMode ? Colors.white : Colors.black87,
+                );
+              },
+            ),
+            const SizedBox(width: 8),
+            // Title
+            const Text(
+              'Soil Monitor',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
         actions: const [
-          NotificationBell(),  // Only one notification icon now
+          NotificationBell(),
         ],
       ),
       body: _screens[_currentIndex],
@@ -67,11 +88,11 @@ class DashboardCarousel extends StatefulWidget {
 
 class _DashboardCarouselState extends State<DashboardCarousel> {
   final DatabaseService _dbService = DatabaseService();
-  late final NotificationChecker _notificationChecker;  // ADD THIS
+  late final NotificationChecker _notificationChecker;
   List<String> _nodes = [];
 
   @override
-  void initState() {  // ADD THIS INITSTATE
+  void initState() {
     super.initState();
     _notificationChecker = NotificationChecker();
     _notificationChecker.initializeAndCheck();
