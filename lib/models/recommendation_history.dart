@@ -1,3 +1,4 @@
+import 'dart:convert';
 
 class RecommendationHistoryEntry {
   final String name;
@@ -5,6 +6,7 @@ class RecommendationHistoryEntry {
   final String? reason;
   final DateTime dateRecommended;
   final int moisture;
+  final double ph;
   final String moistureStatus;
   final double temperature;
   final double humidity;
@@ -15,6 +17,7 @@ class RecommendationHistoryEntry {
     this.reason,
     required this.dateRecommended,
     required this.moisture,
+    required this.ph,
     required this.moistureStatus,
     required this.temperature,
     required this.humidity,
@@ -26,6 +29,7 @@ class RecommendationHistoryEntry {
     if (reason != null) 'reason': reason,
     'dateRecommended': dateRecommended.toIso8601String(),
     'moisture': moisture,
+    'ph': ph,
     'moistureStatus': moistureStatus,
     'temperature': temperature,
     'humidity': humidity,
@@ -38,9 +42,10 @@ class RecommendationHistoryEntry {
       reason: json['reason'],
       dateRecommended: DateTime.parse(json['dateRecommended']),
       moisture: json['moisture'],
+      ph: json['ph']?.toDouble() ?? 7.0,
       moistureStatus: json['moistureStatus'],
-      temperature: json['temperature'],
-      humidity: json['humidity'],
+      temperature: json['temperature']?.toDouble() ?? 0,
+      humidity: json['humidity']?.toDouble() ?? 0,
     );
   }
 }

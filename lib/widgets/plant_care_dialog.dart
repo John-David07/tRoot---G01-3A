@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/theme_manager.dart';
 
 class PlantCareDialog extends StatelessWidget {
   final String plantName;
@@ -108,15 +109,6 @@ class PlantCareDialog extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 14,
                                 color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Please check back later',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDarkMode ? Colors.grey.shade500 : Colors.grey.shade500,
                               ),
                             ),
                           ],

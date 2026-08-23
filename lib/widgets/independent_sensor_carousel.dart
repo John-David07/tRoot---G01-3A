@@ -6,7 +6,16 @@ import '../models/sensor_data.dart';
 import '../utils/theme_manager.dart';
 
 class IndependentSensorCarousel extends StatefulWidget {
-  const IndependentSensorCarousel({super.key});
+  final Function(int)? onPageChanged;
+  final int initialIndex;
+  final Function(String, int, double, double)? onNodeData;
+
+  const IndependentSensorCarousel({
+    super.key,
+    this.onPageChanged,
+    this.initialIndex = 0,
+    this.onNodeData,
+  });
 
   @override
   State<IndependentSensorCarousel> createState() =>
@@ -26,7 +35,8 @@ class _IndependentSensorCarouselState extends State<IndependentSensorCarousel> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
     _loadData();
   }
 
@@ -84,11 +94,13 @@ class _IndependentSensorCarouselState extends State<IndependentSensorCarousel> {
 
   void _onPageChanged(int index) {
     if (_currentIndex == index) return;
-    print('🔄 CAROUSEL: Page changed to index $index (${_nodes[index]})');
     setState(() {
       _currentIndex = index;
     });
     SensorChangeService.notifySensorChanged(index);
+    if (widget.onPageChanged != null) {
+      widget.onPageChanged!(index);
+    }
   }
 
   String _getCondition(int moisture) {
@@ -301,7 +313,6 @@ class _IndependentSensorCarouselState extends State<IndependentSensorCarousel> {
             },
           ),
         ),
-        // Pagination Indicators
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
@@ -330,7 +341,6 @@ class _IndependentSensorCarouselState extends State<IndependentSensorCarousel> {
             }),
           ),
         ),
-        // Pause/Play Button - Centered below pagination
         Padding(
           padding: const EdgeInsets.only(top: 4, bottom: 12),
           child: Center(

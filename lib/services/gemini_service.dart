@@ -27,7 +27,7 @@ class GeminiService {
   }) async {
     try {
       final model = GenerativeModel(
-        model: 'gemini-2.5-flash',
+        model: 'gemini-2.5-flash-lite',
         apiKey: _apiKey,
         generationConfig: GenerationConfig(
           responseMimeType: 'application/json',
@@ -115,7 +115,7 @@ Return ONLY valid JSON in this exact format:
   Future<Map<String, String>> getSoilInfoFromImage(XFile imageFile) async {
     try {
       final model = GenerativeModel(
-        model: 'gemini-2.5-flash',
+        model: 'gemini-2.5-flash-lite',
         apiKey: _apiKey,
       );
       
@@ -217,52 +217,60 @@ Or for invalid images:
   }
   
   List<Map<String, dynamic>> _getFallbackRecommendations() {
-    return [
-      {
-        'name': 'Snake Plant',
-        'scientificName': 'Sansevieria trifasciata',
-        'reason': 'Extremely adaptable and tolerates a wide range of conditions.',
-        'care': {
-          'light': 'Low to bright indirect light. Avoid direct sunlight.',
-          'water': 'Water every 2-6 weeks. Let soil dry completely between waterings.',
-          'temperature': '18-27°C (65-80°F)',
-          'humidity': 'Low to moderate. Very adaptable.',
-          'soil': 'Well-draining cactus/succulent mix.',
-          'fertilizer': 'Fertilize once in spring and summer with cactus fertilizer.',
-          'tips': 'Very hard to kill! Perfect for beginners. Wipe leaves occasionally.',
-          'commonProblems': 'Overwatering (yellow leaves), Cold damage, Root rot',
-        },
-      },
-      {
-        'name': 'ZZ Plant',
-        'scientificName': 'Zamioculcas zamiifolia',
-        'reason': 'Survives in low light and irregular watering schedules.',
-        'care': {
-          'light': 'Low to bright indirect light. Very shade tolerant.',
-          'water': 'Water every 2-3 weeks. Allow soil to dry completely.',
-          'temperature': '18-24°C (65-75°F)',
-          'humidity': 'Low to high. Very adaptable.',
-          'soil': 'Well-draining potting mix with perlite.',
-          'fertilizer': 'Fertilize 2-3 times per year with balanced fertilizer.',
-          'tips': 'Drought tolerant. Wipe leaves to keep them shiny.',
-          'commonProblems': 'Yellow leaves (overwatering), Root rot, Slow growth',
-        },
-      },
-      {
-        'name': 'Pothos',
-        'scientificName': 'Epipremnum aureum',
-        'reason': 'Very forgiving plant that adapts to most indoor environments.',
-        'care': {
-          'light': 'Low to bright indirect light. Variegation needs more light.',
-          'water': 'Water when top 2 inches of soil are dry.',
-          'temperature': '18-29°C (65-85°F)',
-          'humidity': 'Moderate to high. Benefits from occasional misting.',
-          'soil': 'Well-draining potting mix.',
-          'fertilizer': 'Fertilize monthly during growing season.',
-          'tips': 'Trailing or climbing. Propagate easily from cuttings.',
-          'commonProblems': 'Brown leaves (underwatering), Yellow leaves (overwatering), Leggy growth (not enough light)',
-        },
-      },
-    ];
-  }
+  const invalidPlantTerms = ['machine', 'singing', 'dancing', 'computer', 'robot', 'device', 'app', 'software', 'company'];
+  
+  final fallback = [
+    {
+      'name': 'Snake Plant',
+      'scientificName': 'Sansevieria trifasciata',
+      'reason': 'Extremely adaptable and tolerates a wide range of conditions.',
+      'care': {
+        'light': 'Low to bright indirect light. Avoid direct sunlight.',
+        'water': 'Water every 2-6 weeks. Let soil dry completely between waterings.',
+        'temperature': '18-27°C (65-80°F)',
+        'humidity': 'Low to moderate. Very adaptable.',
+        'soil': 'Well-draining cactus/succulent mix. pH 6.0-7.5',
+        'fertilizer': 'Fertilize once in spring and summer with cactus fertilizer.',
+        'tips': 'Very hard to kill! Perfect for beginners. Wipe leaves occasionally.',
+        'commonProblems': 'Overwatering (yellow leaves), Cold damage, Root rot'
+      }
+    },
+    {
+      'name': 'ZZ Plant',
+      'scientificName': 'Zamioculcas zamiifolia',
+      'reason': 'Survives in low light and irregular watering schedules.',
+      'care': {
+        'light': 'Low to bright indirect light. Very shade tolerant.',
+        'water': 'Water every 2-3 weeks. Allow soil to dry completely.',
+        'temperature': '18-24°C (65-75°F)',
+        'humidity': 'Low to high. Very adaptable.',
+        'soil': 'Well-draining potting mix with perlite. pH 6.0-7.0',
+        'fertilizer': 'Fertilize 2-3 times per year with balanced fertilizer.',
+        'tips': 'Drought tolerant. Wipe leaves to keep them shiny.',
+        'commonProblems': 'Yellow leaves (overwatering), Root rot, Slow growth'
+      }
+    },
+    {
+      'name': 'Pothos',
+      'scientificName': 'Epipremnum aureum',
+      'reason': 'Very forgiving plant that adapts to most indoor environments.',
+      'care': {
+        'light': 'Low to bright indirect light. Variegation needs more light.',
+        'water': 'Water when top 2 inches of soil are dry.',
+        'temperature': '18-29°C (65-85°F)',
+        'humidity': 'Moderate to high. Benefits from occasional misting.',
+        'soil': 'Well-draining potting mix. pH 6.0-7.0',
+        'fertilizer': 'Fertilize monthly during growing season.',
+        'tips': 'Trailing or climbing. Propagate easily from cuttings.',
+        'commonProblems': 'Brown leaves (underwatering), Yellow leaves (overwatering), Leggy growth (not enough light)'
+      }
+    }
+  ];
+  
+  // Filter out invalid names from fallback
+  return fallback.where((plant) {
+    final name = (plant['name'] as String?)?.toLowerCase() ?? '';
+    return !invalidPlantTerms.any((term) => name.contains(term));
+  }).toList();
+}
 }

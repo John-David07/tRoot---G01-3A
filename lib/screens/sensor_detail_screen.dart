@@ -9,6 +9,7 @@ import '../services/database_service.dart';
 import '../services/gemini_service.dart';
 import '../utils/theme_manager.dart';
 import '../widgets/recommendation_history_widget.dart';
+import '../widgets/plant_recommendation_chat.dart';
 
 class SensorDetailScreen extends StatefulWidget {
   const SensorDetailScreen({super.key});
@@ -45,13 +46,11 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
   Future<void> _loadCachedSoilData() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Load cached image path (use existsSync for synchronous check)
     final cachedImagePath = prefs.getString(_soilImageCacheKey);
     if (cachedImagePath != null && File(cachedImagePath).existsSync()) {
       _uploadedSoilImage = XFile(cachedImagePath);
     }
 
-    // Load cached soil info
     final cachedSoilInfo = prefs.getString(_soilInfoCacheKey);
     if (cachedSoilInfo != null) {
       try {
@@ -69,12 +68,10 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
   Future<void> _saveSoilDataToCache() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Save image path
     if (_uploadedSoilImage != null) {
       await prefs.setString(_soilImageCacheKey, _uploadedSoilImage!.path);
     }
 
-    // Save soil info
     if (_soilInfo != null) {
       await prefs.setString(_soilInfoCacheKey, json.encode(_soilInfo));
     }
@@ -200,7 +197,6 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
     final color = getColor();
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDarkMode ? Colors.white : Colors.black;
-    // Complementary root background for dark mode
     final rootBg = isDarkMode
         ? const Color(0xFF101A24)
         : const Color(0xFFF5F7FA);
@@ -307,7 +303,7 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
                         condition,
                         style: TextStyle(
                           color: color,
-          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
@@ -437,8 +433,7 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
                     FutureBuilder<List<Map<String, dynamic>>>(
                       future: _historyFuture,
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
                           return const SizedBox(
                             height: 250,
                             child: Center(child: CircularProgressIndicator()),
@@ -470,12 +465,9 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
                           height: 250,
                           child: LineChart(
                             LineChartData(
-                              // Hide grid lines
                               gridData: const FlGridData(show: false),
-                              // Customize titles - only left and bottom
                               titlesData: FlTitlesData(
                                 show: true,
-                                // Left side - Moisture percentage
                                 leftTitles: AxisTitles(
                                   sideTitles: SideTitles(
                                     showTitles: true,
@@ -492,15 +484,12 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
                                     },
                                   ),
                                 ),
-                                // Right side - hidden
                                 rightTitles: const AxisTitles(
                                   sideTitles: SideTitles(showTitles: false),
                                 ),
-                                // Top side - hidden
                                 topTitles: const AxisTitles(
                                   sideTitles: SideTitles(showTitles: false),
                                 ),
-                                // Bottom side - Reading numbers
                                 bottomTitles: AxisTitles(
                                   sideTitles: SideTitles(
                                     showTitles: true,
@@ -682,10 +671,19 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
 
             const SizedBox(height: 40),
 
+            // Plant Recommendation Chat
+            PlantRecommendationChat(
+              sensorId: nodeId,
+              defaultMoisture: moisture.toDouble(),
+              defaultTemperature: temperature,
+              defaultHumidity: humidity,
+            ),
+
+            const SizedBox(height: 40),
+
             RecommendationHistoryWidget(
               sensorId: nodeId,
               onResetHistory: () {
-                // Optional: Additional callback when history is cleared
                 if (mounted) {
                   setState(() {});
                 }

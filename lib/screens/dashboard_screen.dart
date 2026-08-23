@@ -3,7 +3,7 @@ import '../services/database_service.dart';
 import '../models/sensor_data.dart';
 import '../widgets/independent_sensor_carousel.dart';
 import '../widgets/bottom_nav_bar.dart';
-import '../widgets/ai_recommendations_widget.dart';
+import '../widgets/plant_recommendation_chat.dart';
 import '../utils/theme_manager.dart';
 import 'sensors_hub_screen.dart';
 import 'history_screen.dart';
@@ -31,7 +31,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    // Complementary root background for dark mode
     final rootBg = isDarkMode
         ? const Color(0xFF101A24)
         : const Color(0xFFF5F7FA);
@@ -40,13 +39,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            // Logo
             Image.asset(
               'assets/images/favicon.png',
               height: 32,
               width: 32,
               errorBuilder: (context, error, stackTrace) {
-                // Fallback icon if image not found
                 return Icon(
                   Icons.eco,
                   size: 28,
@@ -55,7 +52,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               },
             ),
             const SizedBox(width: 8),
-            // Title
             const Text(
               'Soil Monitor',
               style: TextStyle(fontWeight: FontWeight.w500),
@@ -90,12 +86,26 @@ class _DashboardCarouselState extends State<DashboardCarousel> {
   final DatabaseService _dbService = DatabaseService();
   late final NotificationChecker _notificationChecker;
   List<String> _nodes = [];
+  int _currentCarouselIndex = 0;
+  String? _currentNodeId;
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
     _notificationChecker = NotificationChecker();
     _notificationChecker.initializeAndCheck();
+  }
+
+  void _updateCurrentNode() {
+    if (_nodes.isNotEmpty) {
+      final newNodeId = _nodes[_currentCarouselIndex.clamp(0, _nodes.length - 1)];
+      if (_currentNodeId != newNodeId) {
+        setState(() {
+          _currentNodeId = newNodeId;
+        });
+      }
+    }
   }
 
   @override
@@ -124,13 +134,44 @@ class _DashboardCarouselState extends State<DashboardCarousel> {
           return const Center(child: Text('No sensors found'));
         }
 
+        // Ensure current index is valid
+        if (_currentCarouselIndex >= _nodes.length) {
+          _currentCarouselIndex = 0;
+        }
+
+        // Update current node
+        final currentNodeId = _nodes[_currentCarouselIndex];
+        
+        // Only update if changed
+        if (_currentNodeId != currentNodeId) {
+          _currentNodeId = currentNodeId;
+        }
+
         return SingleChildScrollView(
           child: Column(
             children: [
               _buildSmartInsightCard(data),
-              IndependentSensorCarousel(),
+              IndependentSensorCarousel(
+                initialIndex: _currentCarouselIndex,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentCarouselIndex = index;
+                    _currentNodeId = _nodes[index];
+                  });
+                },
+                onNodeData: (nodeId, moisture, temp, humidity) {
+                  // Optional: update if needed
+                },
+              ),
               const SizedBox(height: 24),
-              const AiRecommendationsWidget(),
+              if (_currentNodeId != null)
+                PlantRecommendationChat(
+                  key: ValueKey(_currentNodeId),
+                  sensorId: _currentNodeId!,
+                  defaultMoisture: data.getNodeMoisture(_currentNodeId!).toDouble(),
+                  defaultTemperature: data.temperature,
+                  defaultHumidity: data.humidity,
+                ),
               const SizedBox(height: 40),
             ],
           ),
