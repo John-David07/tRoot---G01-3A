@@ -10,6 +10,7 @@ import '../services/gemini_service.dart';
 import '../utils/theme_manager.dart';
 import '../widgets/recommendation_history_widget.dart';
 import '../widgets/plant_recommendation_chat.dart';
+import '../widgets/plant_identifier.dart';
 
 class SensorDetailScreen extends StatefulWidget {
   const SensorDetailScreen({super.key});
@@ -668,6 +669,10 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
                 ),
               ),
             ),
+
+            const PlantIdentifier(),
+
+            const SizedBox(height: 40),
 
             const SizedBox(height: 40),
 
