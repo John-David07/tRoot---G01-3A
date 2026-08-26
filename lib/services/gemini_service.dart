@@ -22,6 +22,7 @@ class GeminiService {
   
   Future<RecommendationResult> getRecommendations({
     required int moisture,
+    required double ph,
     required double temperature,
     required double humidity,
   }) async {
@@ -45,6 +46,7 @@ REQUIREMENTS:
 
 Conditions:
 - Soil Moisture: $moisture%
+- Soil pH: $ph (0-14 scale, 7 = neutral, <7 = acidic, >7 = alkaline)
 - Temperature: ${temperature.toStringAsFixed(1)}°C
 - Humidity: ${humidity.toStringAsFixed(1)}%
 
@@ -61,6 +63,8 @@ For each plant, provide:
    - Fertilizer needs
    - Pro tips for beginners
    - Common problems to watch for
+
+IMPORTANT: Avoid recommending Snake Plant and ZZ Plant unless the conditions are truly extreme. Prioritize other plants first.
 
 Return ONLY valid JSON in this exact format:
 [

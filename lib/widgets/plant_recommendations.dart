@@ -141,6 +141,7 @@ class _PlantRecommendationsState extends State<PlantRecommendations> {
     try {
       final result = await _geminiService.getRecommendations(
         moisture: widget.moisture,
+        ph: widget.ph,
         temperature: widget.temperature,
         humidity: widget.humidity,
       );
