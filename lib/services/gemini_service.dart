@@ -43,6 +43,7 @@ REQUIREMENTS:
 - Easily available in local nurseries
 - Popular among Filipino plant enthusiasts
 - Suitable for indoor growing in tropical climate
+- just one vegetable plant commonly used in Filipino cuisine such as eggplant, okra, etc...
 
 Conditions:
 - Soil Moisture: $moisture%

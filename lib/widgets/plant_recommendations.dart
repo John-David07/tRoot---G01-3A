@@ -51,46 +51,81 @@ class _PlantRecommendationsState extends State<PlantRecommendations> {
     _fetchRecommendations();
   }
 
-  Future<String?> _fetchPlantImage(String plantName) async {
+  Future<String?> _fetchPlantImage(String plantName, {String? scientificName}) async {
+    // Cache key uses both names for uniqueness
+    final cacheKey = scientificName != null && scientificName.isNotEmpty 
+        ? '${plantName}_${scientificName}' 
+        : plantName;
+    
     // Check cache first
-    final cached = await _cacheService.getCachedPlantImage(plantName);
+    final cached = await _cacheService.getCachedPlantImage(cacheKey);
     if (cached != null) return cached;
     
     try {
-      // Try loading from Unsplash using a simpler approach
-      // Use the free API without key for testing (limited)
-      final query = Uri.encodeComponent('$plantName plant');
-      
-      // Try using a free image API as fallback
-      final url = 'https://api.unsplash.com/search/photos?query=$query&per_page=1';
-      
-      // Get key from environment
       final accessKey = dotenv.env['UNSPLASH_ACCESS_KEY'] ?? '';
-      
       if (accessKey.isEmpty) {
-        // If no key, use a placeholder service
-        print('No Unsplash API key found, using placeholder');
+        print('No Unsplash API key found');
         return null;
       }
       
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {'Authorization': 'Client-ID $accessKey'},
-      );
+      // Build search queries - prioritize scientific name
+      final List<String> searchQueries = [];
       
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['results'] != null && data['results'].isNotEmpty) {
-          final imageUrl = data['results'][0]['urls']['small'];
-          await _cacheService.cachePlantImage(plantName, imageUrl);
-          return imageUrl;
+      if (scientificName != null && scientificName.trim().isNotEmpty) {
+        final sci = scientificName.trim();
+        searchQueries.add(sci);
+        // Add genus only (first word)
+        final genus = sci.split(' ').first;
+        if (genus != sci) {
+          searchQueries.add(genus);
         }
       }
+      
+      // Then common name
+      final coreName = _extractCoreName(plantName);
+      searchQueries.add(coreName);
+      searchQueries.add('$coreName plant');
+      
+      print('🔍 Searching for: "$plantName" ($scientificName)');
+      print('📋 Query order: $searchQueries');
+      
+      for (final query in searchQueries) {
+        final encodedQuery = Uri.encodeComponent(query);
+        final url = 'https://api.unsplash.com/search/photos?query=$encodedQuery&per_page=3';
+        
+        final response = await http.get(
+          Uri.parse(url),
+          headers: {'Authorization': 'Client-ID $accessKey'},
+        );
+        
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          if (data['results'] != null && data['results'].isNotEmpty) {
+            final imageUrl = data['results'][0]['urls']['regular'] 
+                ?? data['results'][0]['urls']['small'];
+            await _cacheService.cachePlantImage(cacheKey, imageUrl);
+            print('✅ Found image for query: "$query"');
+            return imageUrl;
+          }
+        }
+      }
+      
+      print('❌ No image found for: $plantName ($scientificName)');
       return null;
     } catch (e) {
       print('Failed to fetch plant image: $e');
       return null;
     }
+  }
+
+  // Helper to extract core plant name
+  String _extractCoreName(String name) {
+    String cleaned = name.replaceAll(RegExp(r'\([^)]*\)'), '').trim();
+    if (cleaned.contains('/')) {
+      cleaned = cleaned.split('/').first.trim();
+    }
+    cleaned = cleaned.replaceAll(RegExp(r'\b(var\.|sp\.)\b'), '').trim();
+    return cleaned.isEmpty ? name : cleaned;
   }
 
   bool _isValidPlant(Map<String, dynamic> plant) {
@@ -128,7 +163,10 @@ class _PlantRecommendationsState extends State<PlantRecommendations> {
       });
       
       for (var plant in cached) {
-        final imageUrl = await _fetchPlantImage(plant['name']);
+        final imageUrl = await _fetchPlantImage(
+          plant['name'],
+          scientificName: plant['scientificName'],
+        );
         if (imageUrl != null) {
           setState(() {
             _plantImages[plant['name']] = imageUrl;
@@ -165,7 +203,10 @@ class _PlantRecommendationsState extends State<PlantRecommendations> {
         );
         
         for (var plant in _recommendations) {
-          final imageUrl = await _fetchPlantImage(plant['name']);
+          final imageUrl = await _fetchPlantImage(
+            plant['name'],
+            scientificName: plant['scientificName'],
+          );
           if (imageUrl != null) {
             setState(() {
               _plantImages[plant['name']] = imageUrl;
