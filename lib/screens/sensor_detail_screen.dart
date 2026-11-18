@@ -139,7 +139,7 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
       final status = await Permission.camera.request();
       if (status.isGranted) {
         final picker = ImagePicker();
-        image = await picker.pickImage(source: ImageSource.camera);
+        image = await picker.pickImage(source: ImageSource.camera, maxWidth: 1280, imageQuality: 80);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -150,7 +150,7 @@ class _SensorDetailScreenState extends State<SensorDetailScreen> {
       }
     } else if (option == 'gallery') {
       final picker = ImagePicker();
-      image = await picker.pickImage(source: ImageSource.gallery);
+      image = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1280, imageQuality: 80);
     }
 
     if (image != null) {

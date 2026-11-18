@@ -51,7 +51,7 @@ class _PlantIdentifierState extends State<PlantIdentifier> {
     if (option == 'camera') {
       final status = await Permission.camera.request();
       if (status.isGranted) {
-        image = await _picker.pickImage(source: ImageSource.camera);
+        image = await _picker.pickImage(source: ImageSource.camera, maxWidth: 1280, imageQuality: 80);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -61,7 +61,7 @@ class _PlantIdentifierState extends State<PlantIdentifier> {
         return;
       }
     } else if (option == 'gallery') {
-      image = await _picker.pickImage(source: ImageSource.gallery);
+      image = await _picker.pickImage(source: ImageSource.gallery, maxWidth: 1280, imageQuality: 80);
     }
 
     if (image != null) {

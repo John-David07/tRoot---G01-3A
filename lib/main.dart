@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/sensor_detail_screen.dart';
 import 'utils/theme_manager.dart';
@@ -9,9 +8,6 @@ import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Load environment variables
-  await dotenv.load();
   
   // Only initialize Firebase if not already initialized
   try {

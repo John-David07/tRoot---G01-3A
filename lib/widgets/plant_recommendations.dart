@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../services/gemini_service.dart';
+import '../services/api_client.dart';
 import '../services/recommendation_cache_service.dart';
 import '../services/recommendation_history_service.dart';
 import '../models/recommendation_history.dart';
 import '../utils/theme_manager.dart';
 import 'plant_care_dialog.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class PlantRecommendations extends StatefulWidget {
   final int moisture;
@@ -62,70 +61,22 @@ class _PlantRecommendationsState extends State<PlantRecommendations> {
     if (cached != null) return cached;
     
     try {
-      final accessKey = dotenv.env['UNSPLASH_ACCESS_KEY'] ?? '';
-      if (accessKey.isEmpty) {
-        print('No Unsplash API key found');
-        return null;
+      // The backend holds the Unsplash key and does the searching.
+      final data = await ApiClient.postJson('/api/plant-image', {
+        'plantName': plantName,
+        'scientificName': scientificName ?? '',
+      });
+
+      final imageUrl = data['imageUrl'];
+      if (imageUrl is String && imageUrl.isNotEmpty) {
+        await _cacheService.cachePlantImage(cacheKey, imageUrl);
+        return imageUrl;
       }
-      
-      // Build search queries - prioritize scientific name
-      final List<String> searchQueries = [];
-      
-      if (scientificName != null && scientificName.trim().isNotEmpty) {
-        final sci = scientificName.trim();
-        searchQueries.add(sci);
-        // Add genus only (first word)
-        final genus = sci.split(' ').first;
-        if (genus != sci) {
-          searchQueries.add(genus);
-        }
-      }
-      
-      // Then common name
-      final coreName = _extractCoreName(plantName);
-      searchQueries.add(coreName);
-      searchQueries.add('$coreName plant');
-      
-      print('🔍 Searching for: "$plantName" ($scientificName)');
-      print('📋 Query order: $searchQueries');
-      
-      for (final query in searchQueries) {
-        final encodedQuery = Uri.encodeComponent(query);
-        final url = 'https://api.unsplash.com/search/photos?query=$encodedQuery&per_page=3';
-        
-        final response = await http.get(
-          Uri.parse(url),
-          headers: {'Authorization': 'Client-ID $accessKey'},
-        );
-        
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          if (data['results'] != null && data['results'].isNotEmpty) {
-            final imageUrl = data['results'][0]['urls']['regular'] 
-                ?? data['results'][0]['urls']['small'];
-            await _cacheService.cachePlantImage(cacheKey, imageUrl);
-            print('✅ Found image for query: "$query"');
-            return imageUrl;
-          }
-        }
-      }
-      
-      print('❌ No image found for: $plantName ($scientificName)');
       return null;
     } catch (e) {
       print('Failed to fetch plant image: $e');
       return null;
     }
-  }
-
-  // Helper to extract core plant name
-  String _extractCoreName(String name) {
-    String cleaned = name.replaceAll(RegExp(r'\([^)]*\)'), '').trim();
-    if (cleaned.contains('/')) {
-      cleaned = cleaned.split('/').first.trim();
-    }
-    cleaned = cleaned.replaceAll(RegExp(r'\b(var\.|sp\.)\b'), '').trim();
-    return cleaned.isEmpty ? name : cleaned;
   }
 
   bool _isValidPlant(Map<String, dynamic> plant) {

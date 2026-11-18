@@ -1,7 +1,5 @@
-import 'dart:convert';
-import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'api_client.dart';
 
 // Add this class to return both recommendations and a flag
 class RecommendationResult {
@@ -11,15 +9,10 @@ class RecommendationResult {
   RecommendationResult({required this.recommendations, required this.isFallback});
 }
 
+/// Despite the name, this service no longer talks to Gemini directly.
+/// It calls the Vercel backend, which holds the Gemini key and enforces
+/// rate limits and upload checks.
 class GeminiService {
-  static String get _apiKey {
-    final key = dotenv.env['GEMINI_API_KEY'];
-    if (key == null || key.isEmpty) {
-      throw Exception('GEMINI_API_KEY not found in .env file');
-    }
-    return key;
-  }
-  
   Future<RecommendationResult> getRecommendations({
     required int moisture,
     required double ph,
@@ -27,87 +20,24 @@ class GeminiService {
     required double humidity,
   }) async {
     try {
-      final model = GenerativeModel(
-        model: 'gemini-2.5-flash-lite',
-        apiKey: _apiKey,
-        generationConfig: GenerationConfig(
-          responseMimeType: 'application/json',
-        ),
+      final data = await ApiClient.postJson('/api/recommendations', {
+        'moisture': moisture,
+        'ph': ph,
+        'temperature': temperature,
+        'humidity': humidity,
+      });
+
+      final raw = data['recommendations'];
+      if (raw is List && raw.isNotEmpty) {
+        return RecommendationResult(
+          recommendations: List<Map<String, dynamic>>.from(raw),
+          isFallback: data['isFallback'] == true,
+        );
+      }
+      return RecommendationResult(
+        recommendations: _getFallbackRecommendations(),
+        isFallback: true,
       );
-
-      final prompt = '''
-You are a plant recommendation expert for Philippine home gardening. Based on the following environmental conditions, recommend 3 indoor plants that are:
-
-REQUIREMENTS:
-- Native or common to the Philippines
-- Easily available in local nurseries
-- Popular among Filipino plant enthusiasts
-- Suitable for indoor growing in tropical climate
-- just one vegetable plant commonly used in Filipino cuisine such as eggplant, okra, etc...
-
-Conditions:
-- Soil Moisture: $moisture%
-- Soil pH: $ph (0-14 scale, 7 = neutral, <7 = acidic, >7 = alkaline)
-- Temperature: ${temperature.toStringAsFixed(1)}°C
-- Humidity: ${humidity.toStringAsFixed(1)}%
-
-For each plant, provide:
-1. Plant name
-2. Scientific name
-3. One sentence explaining why it matches these conditions
-4. Complete plant care guide including:
-   - Light requirements
-   - Watering frequency
-   - Ideal temperature range
-   - Humidity preferences
-   - Soil type
-   - Fertilizer needs
-   - Pro tips for beginners
-   - Common problems to watch for
-
-IMPORTANT: Avoid recommending Snake Plant and ZZ Plant unless the conditions are truly extreme. Prioritize other plants first.
-
-Return ONLY valid JSON in this exact format:
-[
-  {
-    "name": "Plant Name",
-    "scientificName": "Scientificus name",
-    "reason": "Brief reason why this plant matches the conditions.",
-    "care": {
-      "light": "Light requirements",
-      "water": "Watering frequency and amount",
-      "temperature": "Ideal temperature range in °C",
-      "humidity": "Humidity preferences",
-      "soil": "Soil type and mix recommendations",
-      "fertilizer": "Fertilizer type and frequency",
-      "tips": "Pro tips for beginners",
-      "commonProblems": "Common issues to watch for (as a comma-separated string)"
-    }
-  }
-]
-''';
-
-      final response = await model.generateContent([Content.text(prompt)]);
-
-      if (response.text == null) {
-        return RecommendationResult(
-          recommendations: _getFallbackRecommendations(),
-          isFallback: true,
-        );
-      }
-
-      final recommendations = _parseRecommendations(response.text!);
-      if (recommendations.isNotEmpty) {
-        return RecommendationResult(
-          recommendations: recommendations,
-          isFallback: false,
-        );
-      } else {
-        return RecommendationResult(
-          recommendations: _getFallbackRecommendations(),
-          isFallback: true,
-        );
-      }
     } catch (e) {
       print('Recommendations error: $e');
       return RecommendationResult(
@@ -119,105 +49,27 @@ Return ONLY valid JSON in this exact format:
   
   Future<Map<String, String>> getSoilInfoFromImage(XFile imageFile) async {
     try {
-      final model = GenerativeModel(
-        model: 'gemini-2.5-flash-lite',
-        apiKey: _apiKey,
-      );
-      
       final bytes = await imageFile.readAsBytes();
-      
-      final prompt = '''
-You are a soil identification expert. Analyze this image and determine if it shows soil.
+      final data = await ApiClient.postImage('/api/soil-identifier', bytes);
 
-If the image shows soil (any type: clay, sandy, loamy, potting mix, garden soil, etc.), provide:
-
-1. Soil type name
-2. Brief description of this soil type
-3. Best for: What plants thrive in this soil
-4. Drainage: Fast, moderate, or poor
-5. Nutrients: High, medium, or low
-
-If the image does NOT show soil (grass, rocks, plants, roots, people, animals, etc.), respond with:
-{
-  "error": true,
-  "message": "Image unidentified. Please provide an image of soil or any kind of it."
-}
-
-Format your response as JSON only, no other text:
-{
-  "name": "Soil Type Name",
-  "description": "Brief description",
-  "bestFor": "What plants thrive here",
-  "drainage": "Fast/Moderate/Poor",
-  "nutrients": "High/Medium/Low"
-}
-
-Or for invalid images:
-{
-  "error": true,
-  "message": "Image unidentified. Please provide an image of soil or any kind of it."
-}
-''';
-      
-      final response = await model.generateContent([
-        Content.text(prompt),
-        Content.data('image/jpeg', bytes),
-      ]);
-      
-      if (response.text == null) {
+      final soil = data['soilData'];
+      if (soil is! Map) {
         return {'error': 'true', 'message': 'Unable to analyze image'};
       }
-      
-      return _parseSoilResponse(response.text!);
+
+      return {
+        'name': (soil['name'] ?? 'Unknown Soil').toString(),
+        'description': (soil['description'] ?? 'No description available').toString(),
+        'bestFor': (soil['bestFor'] ?? 'Various plants').toString(),
+        'drainage': (soil['drainage'] ?? 'Moderate').toString(),
+        'nutrients': (soil['nutrients'] ?? 'Medium').toString(),
+      };
+    } on ApiException catch (e) {
+      // Includes the server's "Image unidentified..." message for non-soil photos.
+      return {'error': 'true', 'message': e.message};
     } catch (e) {
       print('Soil identification error: $e');
       return {'error': 'true', 'message': 'Failed to analyze image'};
-    }
-  }
-  
-  List<Map<String, dynamic>> _parseRecommendations(String responseText) {
-    try {
-      String cleaned = responseText.trim();
-      if (cleaned.startsWith('```json')) cleaned = cleaned.substring(7);
-      if (cleaned.startsWith('```')) cleaned = cleaned.substring(3);
-      if (cleaned.endsWith('```')) cleaned = cleaned.substring(0, cleaned.length - 3);
-      cleaned = cleaned.trim();
-
-      final decoded = json.decode(cleaned);
-      if (decoded is List) {
-        return List<Map<String, dynamic>>.from(decoded);
-      }
-      return [];
-    } catch (e) {
-      print('Parse error: $e');
-      return [];
-    }
-  }
-  
-  Map<String, String> _parseSoilResponse(String responseText) {
-    try {
-      String cleaned = responseText.trim();
-      if (cleaned.startsWith('```json')) cleaned = cleaned.substring(7);
-      if (cleaned.startsWith('```')) cleaned = cleaned.substring(3);
-      if (cleaned.endsWith('```')) cleaned = cleaned.substring(0, cleaned.length - 3);
-      cleaned = cleaned.trim();
-
-      final decoded = json.decode(cleaned);
-      
-      if (decoded['error'] == true) {
-        return {'error': 'true', 'message': decoded['message'] ?? 'Unknown error'};
-      }
-      
-      return {
-        'name': decoded['name'] ?? 'Unknown Soil',
-        'description': decoded['description'] ?? 'No description available',
-        'bestFor': decoded['bestFor'] ?? 'Various plants',
-        'drainage': decoded['drainage'] ?? 'Moderate',
-        'nutrients': decoded['nutrients'] ?? 'Medium',
-      };
-    } catch (e) {
-      print('Parse error: $e');
-      return {'error': 'true', 'message': 'Failed to parse response'};
     }
   }
   
