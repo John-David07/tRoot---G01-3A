@@ -31,13 +31,14 @@ class ApiClient {
 
   static Future<Map<String, dynamic>> postJson(
     String path,
-    Map<String, dynamic> body,
-  ) async {
+    Map<String, dynamic> body, {
+    Map<String, String>? headers,
+  }) async {
     try {
       final response = await http
           .post(
             _uri(path),
-            headers: {'Content-Type': 'application/json'},
+            headers: {'Content-Type': 'application/json', ...?headers},
             body: jsonEncode(body),
           )
           .timeout(_timeout);

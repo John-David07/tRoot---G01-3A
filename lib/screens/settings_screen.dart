@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:firebase_database/firebase_database.dart';
+import '../services/api_client.dart';
 import '../services/cache_service.dart';
 import '../services/recommendation_history_service.dart';
 import '../utils/theme_manager.dart';
@@ -33,42 +33,76 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // Reset ONLY history (Firebase)
   Future<void> _resetHistory() async {
-    final confirmed = await showDialog<bool>(
+    final keyController = TextEditingController();
+    final adminKey = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text(
           'Clear All History Logs',
           style: TextStyle(color: Colors.red),
         ),
-        content: const Text(
-          '⚠️ CAUTION! This action cannot be undone.\n\n'
-          'This will permanently delete ALL history logs from Firebase.\n\n'
-          '✅ The ESP32 will automatically repopulate history with new data once running.\n\n'
-          'Are you sure you want to proceed?',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '⚠️ CAUTION! This action cannot be undone.\n\n'
+              'This will permanently delete ALL history logs from Firebase.\n\n'
+              '✅ The ESP32 will automatically repopulate history with new data once running.\n\n'
+              'Enter the admin key to proceed.',
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: keyController,
+              obscureText: true,
+              autocorrect: false,
+              enableSuggestions: false,
+              decoration: const InputDecoration(
+                labelText: 'Admin key',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () => Navigator.pop(ctx, keyController.text.trim()),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Clear History'),
           ),
         ],
       ),
     );
+    keyController.dispose();
 
-    if (confirmed != true) return;
+    if (adminKey == null) return; // cancelled
+    if (adminKey.isEmpty) {
+      _showMessage('❌ Enter the admin key first.', isSuccess: false);
+      return;
+    }
 
     setState(() => _isLoading = true);
 
     try {
-      final database = FirebaseDatabase.instance;
-      await database.ref('History').remove();
+      // The server checks the key and does the delete. The app no longer
+      // deletes from Firebase directly.
+      await ApiClient.postJson(
+        '/api/reset-history',
+        {},
+        headers: {'x-admin-key': adminKey},
+      );
 
       _showMessage('✅ History logs have been cleared from Firebase. New data will be recorded once the ESP32 runs.');
+    } on ApiException catch (e) {
+      if (e.statusCode == 401) {
+        _showMessage('❌ Invalid admin key.', isSuccess: false);
+      } else {
+        _showMessage('❌ Error resetting history: ${e.message}', isSuccess: false);
+      }
     } catch (e) {
       _showMessage('❌ Error resetting history: $e', isSuccess: false);
     } finally {
